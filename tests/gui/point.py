@@ -2,9 +2,23 @@ from typing import Tuple, Match
 
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout
 
-from qtalos import ValueWidget, regex_parser
+from qtalos import ValueWidget, regex_parser, json_parser, PlaintextParseError
 
 point_pat = r'(?P<x>[0-9\.]+)\s*,\s*(?P<y>[0-9\.]+)'
+
+
+def parse_point(x, y):
+    try:
+        x = float(x)
+    except ValueError as e:
+        raise PlaintextParseError('could not parse x') from e
+
+    try:
+        y = float(y)
+    except ValueError as e:
+        raise PlaintextParseError('could not parse y') from e
+
+    return x, y
 
 
 @regex_parser(point_pat,
@@ -14,17 +28,17 @@ point_pat = r'(?P<x>[0-9\.]+)\s*,\s*(?P<y>[0-9\.]+)'
 def tuple_(m: Match[str]):
     x = m['x']
     y = m['y']
-    try:
-        x = float(x)
-    except ValueError as e:
-        raise tuple_.err('could not parse x') from e
+    return parse_point(x, y)
 
-    try:
-        y = float(y)
-    except ValueError as e:
-        raise tuple_.err('could not parse y') from e
 
-    return x, y
+tuple_.__name__ = 'tuple'
+
+
+@json_parser(dict)
+def json_dict(m: dict):
+    x = m['X']
+    y = m['Y']
+    return parse_point(x, y)
 
 
 class PointWidget(ValueWidget[Tuple[float, float]]):
@@ -33,7 +47,7 @@ class PointWidget(ValueWidget[Tuple[float, float]]):
         self.x_edit = None
         self.y_edit = None
         self.init_ui()
-        self.update_indicator()
+        self.change_value()
 
     def init_ui(self):
         super().init_ui()
@@ -42,12 +56,12 @@ class PointWidget(ValueWidget[Tuple[float, float]]):
 
         self.x_edit = QLineEdit()
         self.x_edit.setPlaceholderText('X')
-        self.x_edit.textChanged.connect(self.update_indicator)
+        self.x_edit.textChanged.connect(self.change_value)
         layout.addWidget(self.x_edit)
 
         self.y_edit = QLineEdit()
         self.y_edit.setPlaceholderText('Y')
-        self.y_edit.textChanged.connect(self.update_indicator)
+        self.y_edit.textChanged.connect(self.change_value)
         layout.addWidget(self.y_edit)
 
         layout.addWidget(self.validation_label)
@@ -66,10 +80,10 @@ class PointWidget(ValueWidget[Tuple[float, float]]):
 
         return x, y
 
-    @classmethod
-    def plaintext_parsers(cls):
+    def plaintext_parsers(self):
         yield from super().plaintext_parsers()
         yield tuple_
+        yield json_dict
 
     def fill(self, t):
         x, y = t
@@ -84,5 +98,5 @@ if __name__ == '__main__':
     w = PointWidget('sample')
     w.show()
     res = app.exec_()
-    print(w.result)
+    print(w.value())
     exit(res)
