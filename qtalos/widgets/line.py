@@ -4,11 +4,13 @@ import re
 
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout
 
-from qtalos import ValueWidget, InnerPlaintextParser
+from qtalos import ValueWidget, InnerPlaintextParser, ValidationError
 
 
 class LineEdit(ValueWidget[str]):
     def __init__(self, title: str, *args, pattern=None, **kwargs):
+        kwargs.setdefault('make_validator_label', pattern is not None)
+
         super().__init__(title, *args, **kwargs)
 
         self.pattern: Optional[Pattern[str]] = re.compile(pattern) if pattern else None
@@ -20,17 +22,12 @@ class LineEdit(ValueWidget[str]):
     def init_ui(self):
         super().init_ui()
         layout = QHBoxLayout(self)
-        self.edit = QLineEdit()
-        self.edit.textChanged.connect(self.change_value)
 
-        layout.addWidget(self.edit)
+        with self.setup_provided(layout):
+            self.edit = QLineEdit()
+            self.edit.textChanged.connect(self.change_value)
 
-        if self.validation_label:
-            layout.addWidget(self.validation_label)
-        if self.auto_button:
-            layout.addWidget(self.auto_button)
-        if self.help_button:
-            layout.addWidget(self.help_button)
+            layout.addWidget(self.edit)
 
     def parse(self):
         return self.edit.text()
@@ -38,13 +35,13 @@ class LineEdit(ValueWidget[str]):
     def validate(self, value):
         super().validate(value)
         if self.pattern and not self.pattern.fullmatch(value):
-            raise self.validation_exception(value, f'value must match pattern {self.pattern}')
+            raise ValidationError(f'value must match pattern {self.pattern}')
 
     @InnerPlaintextParser
     def raw_text(self, v):
         return v
 
-    def fill(self, v):
+    def fill(self, v : str):
         self.edit.setText(v)
 
 

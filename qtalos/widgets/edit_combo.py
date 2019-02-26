@@ -1,4 +1,4 @@
-from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List
+from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List, Callable
 
 from PyQt5.QtWidgets import QComboBox, QHBoxLayout
 
@@ -7,16 +7,19 @@ from qtalos import ValueWidget, PlaintextPrintError, InnerPlaintextParser, Plain
 T = TypeVar('T')
 
 
-class ValueCombo(Generic[T], ValueWidget[T]):
+class ValueEditCombo(Generic[T], ValueWidget[T]):
     NO_DEFAULT_VALUE = object()
+    CONVERT_NAME = object()
 
-    def __init__(self, title, options: Iterable[Union[Tuple[str, T], T]], default_index=-1,
-                 default_value: T = NO_DEFAULT_VALUE, **kwargs):
-        kwargs.setdefault('make_validator_label', False)
+    def __init__(self, title, options: Iterable[Union[Tuple[str, T], T, str]],
+                 convert_func: Callable[[str], T] = lambda x: x,
+                 default_index=-1, default_value: T = NO_DEFAULT_VALUE,
+                 **kwargs):
         super().__init__(title, **kwargs)
         self.default_index = default_index
         self.default_value = default_value
         self.options = options
+        self.convert_func = convert_func
 
         self._opt_lookup_hashable: Dict[T, Tuple[int, str]] = None
         self._opt_lookup_non_hashable: List[Tuple[T, Tuple[int, str]]] = None
@@ -33,6 +36,7 @@ class ValueCombo(Generic[T], ValueWidget[T]):
 
         with self.setup_provided(layout):
             self.combo_box = QComboBox()
+            self.combo_box.setEditable(True)
             layout.addWidget(self.combo_box)
 
             self._opt_lookup_hashable = {}
@@ -54,25 +58,36 @@ class ValueCombo(Generic[T], ValueWidget[T]):
                     self._opt_lookup_non_hashable.append((value, (i, name)))
 
             self.combo_box.setCurrentIndex(ind)
-            self.combo_box.currentIndexChanged.connect(self.change_value)
+            self.combo_box.editTextChanged.connect(self.change_value)
 
     def parse(self):
-        if self.combo_box.currentIndex() == -1:
-            raise ParseError('value is unset')
-        return self.combo_box.currentData()
+        cur_text = self.combo_box.currentText()
+        _, ret = self._opt_lookup_name.get(cur_text, (-1, self.CONVERT_NAME))
+        if ret is self.CONVERT_NAME:
+            ret = self.convert(cur_text)
+        return ret
 
-    def extract_name_and_value(self, value: Union[Tuple[str, T], T]) -> Tuple[str, T]:
+    def extract_name_and_value(self, value: Union[Tuple[str, T], T, str]) -> Tuple[str, T]:
         if isinstance(value, tuple) and len(value) == 2 and isinstance(value[0], str):
             return value
 
         try:
+            # first try to print like a value, if that fails, convert as a name
             name = self.joined_plaintext_printer(value)
-        except PlaintextPrintError as e:
+        except (PlaintextPrintError, TypeError) as e:
+            if isinstance(value, str):
+                return value, self.convert(value)
             raise Exception('the joined printer raised an exception for a combo option') from e
+        else:
+            return name, value
 
-        return name, value
+    def fill(self, key: T):
+        def fill_from_str(inner_exc):
+            if isinstance(key, str):
+                self.combo_box.setEditText(key)
+                return
+            raise KeyError(f'fill value {key} is not an option, and is not a string') from inner_exc
 
-    def fill(self, key: Union[T, int]):
         try:
             index, _ = self._opt_lookup_hashable[key]
         except TypeError:
@@ -82,13 +97,10 @@ class ValueCombo(Generic[T], ValueWidget[T]):
                     index = i
                     break
             else:
-                raise KeyError(f'fill value {key} is not an option')
+                return fill_from_str(None)
         except KeyError as e:
             # v is hashable, but not present
-            if isinstance(key, int):
-                index = key
-            else:
-                raise KeyError('fill value is not an option') from e
+            return fill_from_str(e)
 
         self.combo_box.setCurrentIndex(index)
 
@@ -101,22 +113,32 @@ class ValueCombo(Generic[T], ValueWidget[T]):
         else:
             return ret
 
+    @InnerPlaintextParser
+    def by_convert(self, v):
+        try:
+            return self.convert(v)
+        except ParseError as e:
+            raise PlaintextParseError('convert raised an exception') from e
+
+    def convert(self, v: str):
+        # we leave this function for potential inheritors
+        return self.convert_func(v)
+
 
 if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication
-    from enum import Enum, auto
-
-
-    class Options(Enum):
-        first = auto()
-        second = auto()
-        third = auto()
-
+    from qtalos import wrap_parser
 
     app = QApplication([])
-    w = ValueCombo('sample', options=Options)
+    w = ValueEditCombo('sample',
+                       options=[
+                           ('one', 1),
+                           ('two', 2),
+                           ('three', 3)
+                       ],
+                       convert_func=wrap_parser(ValueError, int)
+                       )
     w.show()
-    w.fill_from_text('Options.first')
     res = app.exec_()
     print(w.value())
     exit(res)

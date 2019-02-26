@@ -1,8 +1,10 @@
-from typing import TypeVar, Union, Pattern, Callable, Any, Match, Iterable
+from typing import TypeVar, Union, Pattern, Callable, Any, Match, Iterable, Tuple, Type
 
 import re
 import json
 from functools import wraps, update_wrapper
+
+from qtalos.__util__ import exc_wrap
 
 T = TypeVar('T')
 
@@ -110,3 +112,7 @@ class InnerPlaintextPrinter:
 
     def __get__(self, instance, owner):
         return self.__func__
+
+
+wrap_plaintext_parser = exc_wrap(PlaintextParseError('an inner function raised an exception'))
+wrap_plaintext_printer = exc_wrap(PlaintextPrintError('an inner function raised an exception'))

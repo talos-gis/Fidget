@@ -2,7 +2,7 @@ from typing import Tuple, Match
 
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout
 
-from qtalos import ValueWidget, regex_parser, json_parser, PlaintextParseError
+from qtalos import ValueWidget, regex_parser, json_parser, PlaintextParseError, ParseError, wrap_plaintext_parser
 
 point_pat = r'(?P<x>[0-9\.]+)\s*,\s*(?P<y>[0-9\.]+)'
 
@@ -35,9 +35,10 @@ tuple_.__name__ = 'tuple'
 
 
 @json_parser(dict)
+@wrap_plaintext_parser(KeyError)
 def json_dict(m: dict):
-    x = m['X']
-    y = m['Y']
+    x = m.get('X') or m['x']
+    y = m.get('Y') or m['y']
     return parse_point(x, y)
 
 
@@ -53,30 +54,27 @@ class PointWidget(ValueWidget[Tuple[float, float]]):
         super().init_ui()
 
         layout = QHBoxLayout(self)
+        with self.setup_provided(layout):
+            self.x_edit = QLineEdit()
+            self.x_edit.setPlaceholderText('X')
+            self.x_edit.textChanged.connect(self.change_value)
+            layout.addWidget(self.x_edit)
 
-        self.x_edit = QLineEdit()
-        self.x_edit.setPlaceholderText('X')
-        self.x_edit.textChanged.connect(self.change_value)
-        layout.addWidget(self.x_edit)
-
-        self.y_edit = QLineEdit()
-        self.y_edit.setPlaceholderText('Y')
-        self.y_edit.textChanged.connect(self.change_value)
-        layout.addWidget(self.y_edit)
-
-        layout.addWidget(self.validation_label)
-        layout.addWidget(self.plaintext_button)
+            self.y_edit = QLineEdit()
+            self.y_edit.setPlaceholderText('Y')
+            self.y_edit.textChanged.connect(self.change_value)
+            layout.addWidget(self.y_edit)
 
     def parse(self):
         try:
             x = float(self.x_edit.text())
         except ValueError as e:
-            raise self.parse_exception('error in x') from e
+            raise ParseError('error in x') from e
 
         try:
             y = float(self.y_edit.text())
         except ValueError as e:
-            raise self.parse_exception('error in y') from e
+            raise ParseError('error in y') from e
 
         return x, y
 
@@ -95,7 +93,7 @@ if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication
 
     app = QApplication([])
-    w = PointWidget('sample')
+    w = PointWidget('sample', make_plaintext_button=True)
     w.show()
     res = app.exec_()
     print(w.value())
