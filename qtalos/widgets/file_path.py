@@ -8,7 +8,7 @@ from qtalos import ValueWidget, ParseError, ValidationError
 from qtalos.__util__ import filename_valid
 
 
-class FilePathEditWidget(ValueWidget[Path]):
+class FilePathWidget(ValueWidget[Path]):
     def __init__(self, title: str, parent=None, flags=None, exist_cond: Optional[bool] = True,
                  dialog: QFileDialog = ..., **kwargs):
         super().__init__(title, parent=parent, flags=flags, **kwargs)
@@ -73,6 +73,9 @@ class FilePathEditWidget(ValueWidget[Path]):
                 and value.is_dir():
             raise ValidationError('path is a directory')
 
+    def fill(self, v: Path):
+        self.edit.setText(str(v))
+
 
 if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication
@@ -80,7 +83,7 @@ if __name__ == '__main__':
     print(Path('.').absolute())
 
     app = QApplication([])
-    w = FilePathEditWidget('sample')
+    w = FilePathWidget('sample')
     w.show()
     res = app.exec_()
     print(w.value())

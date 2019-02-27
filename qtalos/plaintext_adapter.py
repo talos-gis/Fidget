@@ -45,10 +45,10 @@ def json_parser(acceptable_types=(str, dict, list, int, float)):
             try:
                 json_obj = json.loads(s)
             except json.JSONDecodeError as e:
-                raise PlaintextParseError('could not parse json') from e
+                raise PlaintextParseError(...) from e
             else:
                 if not isinstance(json_obj, acceptable_types):
-                    raise PlaintextParseError('object is not of an acceptable type')
+                    raise PlaintextParseError(f'object is not of an acceptable type (expected {acceptable_types}, got {type(json_obj)})')
                 return func(json_obj)
 
         return ret
@@ -111,8 +111,8 @@ class InnerPlaintextPrinter:
         return self.__func__(*args, **kwargs)
 
     def __get__(self, instance, owner):
-        return self.__func__
+        return self.__func__.__get__(instance, owner)
 
 
-wrap_plaintext_parser = exc_wrap(PlaintextParseError('an inner function raised an exception'))
-wrap_plaintext_printer = exc_wrap(PlaintextPrintError('an inner function raised an exception'))
+wrap_plaintext_parser = exc_wrap(PlaintextParseError(...))
+wrap_plaintext_printer = exc_wrap(PlaintextPrintError(...))

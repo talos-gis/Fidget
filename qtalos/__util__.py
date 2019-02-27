@@ -12,6 +12,7 @@ win_illegal_base_names = frozenset(('', 'CON', 'PRN', 'AUX', 'NUL',
                                     'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'))
 win_illegal_suffixes = frozenset(' .')
 
+
 # todo move this
 def filename_valid(path: Path):
     if os.name == 'nt':
@@ -36,10 +37,26 @@ def filename_valid(path: Path):
 
 def error_details(e: Exception):
     ret = []
+    type_names = []
     while e:
-        ret.append(f'{type(e).__name__}: {e}')
+        if e.args != (...,):
+            ret.append(f'{type(e).__name__}: {e}')
+        type_names.append(type(e).__name__)
         e = e.__cause__
-    return '\nfrom:\n'.join(ret)
+    if ret:
+        return '\n\tfrom:\n'.join(ret)
+    return '\n\tfrom:\n'.join(type_names)
+
+
+def error_tooltip(e: Exception):
+    ret = None
+    while e:
+        if e.args == (...,):
+            ret = f'{type(e).__name__}: ...'
+            e = e.__cause__
+            continue
+        return f'{type(e).__name__}: {e}'
+    raise AssertionError
 
 
 def exc_wrap(to_raise: Exception):

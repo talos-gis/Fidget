@@ -11,3 +11,11 @@ def rename(new_name):
         return ret
 
     return ret
+
+
+def has_init(cls):
+    return '__init__' in cls.__dict__
+
+
+def is_trivial_printer(p):
+    return p in (str, repr)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Generic, TypeVar, Optional, Callable, Tuple, Union, Iterable, Sequence
+from typing import Generic, TypeVar, Optional, Callable, Tuple, Union, Iterable
 
 from abc import abstractmethod
 from enum import IntEnum
@@ -8,12 +8,12 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from PyQt5.QtWidgets import QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
-    QMessageBox, QDialog, QFileDialog
+    QMessageBox, QDialog, QFileDialog, QGroupBox, QGridLayout
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from qtalos.plaintext_adapter import PlaintextPrinter, PlaintextParser, PlaintextParseError, PlaintextPrintError, \
     join_parsers, join_printers, InnerPlaintextParser, InnerPlaintextPrinter
-from qtalos.__util__ import error_details, exc_wrap
+from qtalos.__util__ import error_details, error_tooltip
 
 T = TypeVar('T')
 
@@ -131,13 +131,19 @@ class ValueWidget(QWidget, Generic[T]):
         if self.validation_func:
             self.validation_func(value)
 
-    def plaintext_printers(self) -> Iterable[PlaintextPrinter[T]]:
+    def inner_plaintext_parsers(self):
+        yield from (ip.__get__(self, type(self)) for ip in self._inner_parsers)
+
+    def inner_plaintext_printers(self):
         yield from (ip.__get__(self, type(self)) for ip in self._inner_printers)
+
+    def plaintext_printers(self) -> Iterable[PlaintextPrinter[T]]:
+        yield from self.inner_plaintext_printers()
         yield str
         yield repr
 
     def plaintext_parsers(self) -> Iterable[PlaintextParser[T]]:
-        yield from (ip.__get__(self, type(self)) for ip in self._inner_parsers)
+        yield from self.inner_plaintext_parsers()
 
     # endregion
 
@@ -163,27 +169,29 @@ class ValueWidget(QWidget, Generic[T]):
             self._joined_plaintext_printer = join_printers(self.plaintext_printers)
         return self._joined_plaintext_printer
 
-    def provided_pre(self):
+    def provided_pre(self, exclude=()):
         return (yield from (
             y for y in (self.title_label,)
-            if y
+            if y and y not in exclude
         ))
 
-    def provided_post(self):
+    def provided_post(self, exclude=()):
         return (yield from (
             y for y in (self.validation_label,
                         self.auto_button,
                         self.plaintext_button)
-            if y
+            if y and y not in exclude
         ))
 
     @contextmanager
-    def setup_provided(self, layout):
-        for p in self.provided_pre():
-            layout.addWidget(p)
+    def setup_provided(self, pre_layout, post_layout=..., exclude=()):
+        for p in self.provided_pre(exclude=exclude):
+            pre_layout.addWidget(p)
         yield
-        for p in self.provided_post():
-            layout.addWidget(p)
+        if post_layout is ...:
+            post_layout = pre_layout
+        for p in self.provided_post(exclude=exclude):
+            post_layout.addWidget(p)
 
         self._update_indicator()
 
@@ -205,6 +213,8 @@ class ValueWidget(QWidget, Generic[T]):
         self._update_indicator()
         self.on_change.emit()
 
+    def __str__(self):
+        return super().__str__()+': '+self.title
     # endregion
 
     def _invalidate_value(self):
@@ -222,7 +232,7 @@ class ValueWidget(QWidget, Generic[T]):
             self.fill(value)
 
     def _plaintext_btn_click(self):
-        self._plaintext_widget.prep_for_show()
+        self._plaintext_widget.prep_for_show(self)
         if self._plaintext_widget.exec_() == QDialog.Accepted:
             self.fill(self._plaintext_widget.result_value)
 
@@ -235,9 +245,10 @@ class ValueWidget(QWidget, Generic[T]):
         if self.validation_label and self.validation_label.parent():
             if state == ValueState.ok:
                 text = 'OK'
+                tooltip = str(val)
             else:
                 text = 'ERR'
-            tooltip = str(val)
+                tooltip = error_tooltip(val)
 
             self.validation_label.setText(text)
             self.validation_label.setToolTip(tooltip)
@@ -313,8 +324,6 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
         kwargs.setdefault('make_title_label', False)
         super().__init__('plaintext edit for ' + owner.title, *args, **kwargs)
 
-        self.owner = owner
-
         self.current_value: T = self.NO_CURRENT_VALUE
 
         self.print_widget: QWidget = None
@@ -335,9 +344,8 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
 
         master_layout = QVBoxLayout(self)
 
-        self.print_widget = QWidget()
+        self.print_widget = QGroupBox('current value:')
         print_master_layout = QVBoxLayout(self.print_widget)
-        print_master_layout.addWidget(QLabel('current value:'))
 
         print_layout = QHBoxLayout()
         print_master_layout.addLayout(print_layout)
@@ -350,9 +358,8 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
 
         master_layout.addWidget(self.print_widget)
 
-        self.parse_widget = QWidget()
+        self.parse_widget = QGroupBox('set value:')
         parse_master_layout = QVBoxLayout(self.parse_widget)
-        parse_master_layout.addWidget(QLabel('set value:'))
 
         parse_layout = QHBoxLayout()
         parse_master_layout.addLayout(parse_layout)
@@ -362,20 +369,24 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
         self.print_combo.currentIndexChanged[int].connect(self.update_print)
         parse_layout.addWidget(self.parse_edit)
 
+        parse_extras_layout = QGridLayout()
+
         self.parse_combo = QComboBox()
         self.parse_combo.currentIndexChanged[int].connect(self.change_value)
-        parse_layout.addWidget(self.parse_combo)
+        parse_extras_layout.addWidget(self.parse_combo, 0, 0)
 
         if self.validation_label:
-            parse_layout.addWidget(self.validation_label)
+            parse_extras_layout.addWidget(self.validation_label, 0, 1)
 
         file_button = QPushButton('from file...')
         file_button.clicked.connect(self.load_file)
-        parse_layout.addWidget(file_button)
+        parse_extras_layout.addWidget(file_button, 1, 0)
 
         ok_button = QPushButton('OK')
         ok_button.clicked.connect(self.commit_parse)
-        parse_layout.addWidget(ok_button)
+        parse_extras_layout.addWidget(ok_button, 1, 1)
+
+        parse_layout.addLayout(parse_extras_layout)
 
         master_layout.addWidget(self.parse_widget)
 
@@ -387,7 +398,7 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
         try:
             return parser(self.parse_edit.toPlainText())
         except PlaintextParseError as e:
-            raise ParseError('parser failed') from e
+            raise ParseError(...) from e
 
     def load_file(self, *args):
         filename, _ = QFileDialog.getOpenFileName(self, 'open file', filter='text files (*.txt *.csv);;all files (*.*)')
@@ -416,19 +427,19 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
 
         self.print_edit.setPlainText(text)
 
-    def prep_for_show(self):
-        state, self.current_value, _ = self.owner.value()
+    def prep_for_show(self, owner: ValueWidget[T]):
+        state, self.current_value, _ = owner.value()
         if state < 0:
             self.print_widget.setVisible(False)
             printers = False
         else:
             self.print_widget.setVisible(True)
-            printers = list(self.owner.plaintext_printers())
+            printers = list(owner.plaintext_printers())
             # setup the print
             self.print_combo.clear()
             if len(printers) > 1:
                 self.print_combo.setVisible(True)
-                self.print_combo.addItem('<all>', self.owner.joined_plaintext_printer)
+                self.print_combo.addItem('<all>', owner.joined_plaintext_printer)
             else:
                 self.print_combo.setVisible(False)
 
@@ -436,19 +447,19 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
                 self.print_combo.addItem(printer.__name__, printer)
             self.print_combo.setCurrentIndex(0)
 
-        parsers = list(self.owner.plaintext_parsers())
+        parsers = list(owner.plaintext_parsers())
         if not parsers:
             self.parse_widget.setVisible(False)
         else:
-            if not self.owner.fill:
-                raise Exception('parsers are defined but the widget has no implemented fill method')
+            if not owner.fill:
+                raise Exception(f'parsers are defined but the widget has no implemented fill method (in widget {owner})')
 
             self.parse_widget.setVisible(True)
             self.parse_edit.clear()
             self.parse_combo.clear()
             if len(parsers) > 1:
                 self.parse_combo.setVisible(True)
-                self.parse_combo.addItem('<all>', self.owner.joined_plaintext_parser)
+                self.parse_combo.addItem('<all>', owner.joined_plaintext_parser)
             else:
                 self.parse_combo.setVisible(False)
 
@@ -463,7 +474,7 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
         try:
             self.result_value = self.parse()
         except ParseError as e:
-            QMessageBox.critical(self, 'error during parse', str(e))
+            QMessageBox.critical(self, 'error during parse', error_details(e))
         else:
             self.result_outcome = True
             self.accept()

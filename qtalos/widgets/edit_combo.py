@@ -109,7 +109,7 @@ class ValueEditCombo(Generic[T], ValueWidget[T]):
         try:
             _, ret = self._opt_lookup_name[name]
         except KeyError as e:
-            raise PlaintextParseError('name not found') from e
+            raise PlaintextParseError(...) from e
         else:
             return ret
 
@@ -118,7 +118,7 @@ class ValueEditCombo(Generic[T], ValueWidget[T]):
         try:
             return self.convert(v)
         except ParseError as e:
-            raise PlaintextParseError('convert raised an exception') from e
+            raise PlaintextParseError(...) from e
 
     def convert(self, v: str):
         # we leave this function for potential inheritors
