@@ -64,6 +64,8 @@ def join_parsers(parsers: Callable[[], Iterable[PlaintextParser]]):
                 return p(s)
             except PlaintextParseError as e:
                 first_error = first_error or e
+            except Exception as e:
+                raise AssertionError('plaintext parser raised') from e
         raise first_error or PlaintextParseError('no parsers')
 
     ret.__name__ = '<all>'

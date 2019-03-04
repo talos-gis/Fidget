@@ -7,8 +7,6 @@ from PyQt5.QtWidgets import QLineEdit, QHBoxLayout
 from qtalos import ValueWidget, InnerPlaintextParser, ValidationError, PlaintextParseError
 
 
-# todo option for title in placeholder text?
-
 class LineEdit(ValueWidget[str]):
     def __init__(self, title: str, *args, pattern: Union[str, Pattern[str]] = None, placeholder=True,
                  **kwargs):

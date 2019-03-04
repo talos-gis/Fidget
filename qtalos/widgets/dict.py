@@ -4,7 +4,7 @@ from typing import Callable, Union, Mapping, Iterable, Tuple
 import json
 from functools import wraps
 
-from PyQt5.QtWidgets import QVBoxLayout, QFrame, QScrollArea
+from PyQt5.QtWidgets import QVBoxLayout, QFrame, QScrollArea, QWidget
 from PyQt5.QtCore import Qt
 
 from qtalos import ValueWidget, ParseError, ValidationError, InnerPlaintextParser, InnerPlaintextPrinter, \
@@ -38,28 +38,33 @@ class DictWidget(ValueWidget[Mapping[str, object]]):
 
         owner = self
         if scrollable:
-            owner = QScrollArea(self)
-            owner.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-            owner.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            owner_layout = QVBoxLayout()
+            owner.setLayout(owner_layout)
 
-        master_layout = layout_cls(owner)
+            owner = QScrollArea(owner)
+            owner.setWidgetResizable(True)
+            owner_layout.addWidget(owner)
+
+        master = QWidget()
+        master_layout = layout_cls(master)
+
+        if scrollable:
+            owner.setWidget(master)
+        else:
+            master.setParent(owner)
 
         frame = QFrame()
         if frame_style is not None:
             frame.setFrameStyle(frame_style)
 
-        layout = layout_cls()
+        layout = layout_cls(frame)
 
         with self.setup_provided(master_layout, layout):
             for name, option in self.inner.items():
                 option.on_change.connect(self.change_value)
                 layout.addWidget(option)
 
-        frame.setLayout(layout)
         master_layout.addWidget(frame)
-
-
-        #owner.setLayout(master_layout)
 
     @staticmethod
     def _to_name_subwidget(option: Union[ValueWidget, Tuple[str, ValueWidget]]) -> Tuple[str, ValueWidget]:
@@ -177,7 +182,7 @@ if __name__ == '__main__':
 
 
     app = QApplication([])
-    w = PointWidget('sample', make_plaintext_button=True, scrollable=False)
+    w = PointWidget('sample', make_plaintext_button=True, scrollable=True)
     w.show()
     res = app.exec_()
     print(w.value())

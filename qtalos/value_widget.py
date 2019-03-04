@@ -63,7 +63,7 @@ class ValueWidget(QWidget, Generic[T]):
                  validation_func: Callable[[T], None] = None,
                  auto_func: Callable[[], T] = None,
                  make_title_label=True,
-                 make_validator_label=True,
+                 make_validator_label=False,
                  make_plaintext_button=False,
                  make_auto_button=...,
                  **kwargs):
@@ -116,7 +116,7 @@ class ValueWidget(QWidget, Generic[T]):
             self.plaintext_button = QPushButton('text')
             self.plaintext_button.clicked.connect(self._plaintext_btn_click)
 
-            self._plaintext_widget = PlaintextEditWidget(self)
+            self._plaintext_widget = PlaintextEditWidget(self, make_validator_label=True)
 
         if self.make_title_label:
             self.title_label = QLabel(self.title)

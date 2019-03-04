@@ -5,6 +5,7 @@ from qtalos.widgets.dict import DictWidget
 from qtalos.widgets.edit_combo import ValueEditCombo
 from qtalos.widgets.file_path import FilePathWidget
 from qtalos.widgets.idiomatic_inner import inner_widget
+from qtalos.widgets.label import LabelValueWidget
 from qtalos.widgets.line import LineEdit
 from qtalos.widgets.optional import OptionalValueWidget
 from qtalos.widgets.stacked import StackedValueWidget

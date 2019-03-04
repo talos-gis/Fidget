@@ -5,7 +5,7 @@ from typing import TypeVar, Generic, Callable, Optional
 from functools import wraps
 from PyQt5.QtWidgets import QHBoxLayout
 
-from qtalos import ValueWidget
+from qtalos import ValueWidget, ParseError, PlaintextParseError
 from qtalos.widgets.idiomatic_inner import get_idiomatic_inner_widgets
 from qtalos.widgets.__util__ import has_init, is_trivial_printer
 
@@ -40,6 +40,8 @@ class ConverterWidget(Generic[F, T], ValueWidget[T]):
         super().init_ui()
         layout = QHBoxLayout(self)
         layout.addWidget(self.inner)
+        self.setMinimumSize(self.inner.minimumSize())
+        self.setMaximumSize(self.inner.maximumSize())
 
         if self.inner.title_label:
             self.make_title_label = True
@@ -87,7 +89,10 @@ class ConverterWidget(Generic[F, T], ValueWidget[T]):
             @wraps(parser)
             def p(*args, **kwargs):
                 f = parser(*args, **kwargs)
-                return self.convert(f)
+                try:
+                    return self.convert(f)
+                except ParseError as e:
+                    raise PlaintextParseError(...) from e
 
             yield p
 

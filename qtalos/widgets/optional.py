@@ -15,7 +15,7 @@ T = TypeVar('T')
 
 
 class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
-    def __init__(self, inner: ValueWidget[T] = None, default_state=False, layout_cls=..., **kwargs):
+    def __init__(self, inner: ValueWidget[T] = None, default_state=False, layout_cls=..., none_value=None, **kwargs):
         if (inner is None) == (self.make_inner is None):
             if inner:
                 raise Exception('inner provided when make_inner is implemented')
@@ -31,6 +31,8 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
 
         self.inner = inner
         self.not_none_checkbox: QCheckBox = None
+
+        self.none_value = none_value
 
         self.init_ui(layout_cls)
 
@@ -63,11 +65,11 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
     def parse(self):
         if self.not_none_checkbox.isChecked():
             return self.inner.parse()
-        return None
+        return self.none_value
 
     def validate(self, v):
         super().validate(v)
-        if v is not None:
+        if v is not self.none_value:
             self.inner.validate(v)
 
     def plaintext_printers(self):
@@ -78,8 +80,8 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
 
             @wraps(ip)
             def wrapper(v):
-                if v is None:
-                    raise PlaintextPrintError('this printer cannot handle None')
+                if v is self.none_value:
+                    raise PlaintextPrintError(f'this printer cannot handle {v!r}')
                 return ip(v)
 
             yield wrapper
@@ -90,7 +92,7 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
         yield none_parser
 
     def _fill(self, v):
-        if v is None:
+        if v is self.none_value:
             self.not_none_checkbox.setChecked(False)
         else:
             self.not_none_checkbox.setChecked(True)
@@ -109,6 +111,7 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
         # todo this solution has a bunch of problems
         if not self.inner.isEnabled() and self.inner.underMouse():
             self.not_none_checkbox.setChecked(True)
+            self.inner.setFocus()
         super().mousePressEvent(a0)
 
     def __init_subclass__(cls, **kwargs):

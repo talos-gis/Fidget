@@ -31,6 +31,8 @@ def simple_edit(converter_func: Callable[[str], T], name=...):
         name = f'{converter_func.__name__.capitalize()}Edit'
 
     Ret.__name__ = name
+    Ret.__qualname__ = simple_edit.__qualname__[:-len(simple_edit.__name__)]+name
+
     return Ret
 
 
