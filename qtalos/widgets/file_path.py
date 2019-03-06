@@ -2,7 +2,7 @@ from typing import Optional
 
 from pathlib import Path
 
-from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QFileDialog, QLabel, QPushButton
+from qtalos.backend import QHBoxLayout, QLineEdit, QFileDialog, QLabel, QPushButton
 
 from qtalos import ValueWidget, ParseError, ValidationError
 from qtalos.__util__ import filename_valid
@@ -78,7 +78,7 @@ class FilePathWidget(ValueWidget[Path]):
 
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    from qtalos.backend import QApplication
 
     print(Path('.').absolute())
 

@@ -1,6 +1,6 @@
 from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List
 
-from PyQt5.QtWidgets import QComboBox, QHBoxLayout
+from qtalos.backend import QComboBox, QHBoxLayout
 
 from qtalos import ValueWidget, PlaintextPrintError, InnerPlaintextParser, PlaintextParseError, ParseError
 
@@ -9,10 +9,11 @@ T = TypeVar('T')
 
 class ValueCombo(Generic[T], ValueWidget[T]):
     NO_DEFAULT_VALUE = object()
+    MAKE_TITLE = MAKE_PLAINTEXT = MAKE_INDICATOR = False
+
 
     def __init__(self, title, options: Iterable[Union[Tuple[str, T], T]], default_index=-1,
                  default_value: T = NO_DEFAULT_VALUE, **kwargs):
-        kwargs.setdefault('make_validator_label', False)
         super().__init__(title, **kwargs)
         self.default_index = default_index
         self.default_value = default_value
@@ -103,7 +104,7 @@ class ValueCombo(Generic[T], ValueWidget[T]):
 
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    from qtalos.backend import QApplication
     from enum import Enum, auto
 
 

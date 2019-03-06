@@ -1,6 +1,6 @@
 from typing import TypeVar, Generic, Tuple, Union
 
-from PyQt5.QtWidgets import QLabel, QHBoxLayout
+from qtalos.backend import QLabel, QHBoxLayout
 
 from qtalos import ValueWidget, InnerPlaintextParser, PlaintextParseError
 
@@ -11,7 +11,7 @@ class LabelValueWidget(Generic[T], ValueWidget[T]):
     NO_DEFAULT_VALUE = object()
 
     def __init__(self, title, value: Union[Tuple[str, T], T], **kwargs):
-        kwargs.setdefault('make_title_label', False)
+        kwargs.setdefault('make_title', False)
         super().__init__(title, **kwargs)
 
         self.label: QLabel = None
@@ -53,7 +53,7 @@ class LabelValueWidget(Generic[T], ValueWidget[T]):
 
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    from qtalos.backend import QApplication
 
     app = QApplication([])
     w = LabelValueWidget('sample', ('Hi', 1245))

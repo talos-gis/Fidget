@@ -4,8 +4,10 @@ from typing import Callable, Union, Mapping, Iterable, Tuple
 import json
 from functools import wraps
 
-from PyQt5.QtWidgets import QVBoxLayout, QFrame, QScrollArea, QWidget
-from PyQt5.QtCore import Qt
+from qtalos.backend import\
+    QVBoxLayout, QFrame, QScrollArea, QWidget,\
+    \
+    Qt
 
 from qtalos import ValueWidget, ParseError, ValidationError, InnerPlaintextParser, InnerPlaintextPrinter, \
     PlaintextPrintError, PlaintextParseError
@@ -170,19 +172,23 @@ class DictWidget(ValueWidget[Mapping[str, object]]):
 
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    from qtalos.backend import QApplication
     from qtalos.widgets import *
 
 
     class PointWidget(DictWidget):
+        MAKE_PLAINTEXT = True
+        MAKE_TITLE = True
+        MAKE_INDICATOR = True
+
         def make_inner(self):
-            yield FloatEdit('X', make_validator_label=False)
-            yield FloatEdit('Y', make_validator_label=False)
-            yield OptionalValueWidget(FloatEdit('Z', make_validator_label=False))
+            yield FloatEdit('X', make_indicator=False)
+            yield FloatEdit('Y', make_indicator=False)
+            yield OptionalValueWidget(FloatEdit('Z', make_indicator=False))
 
 
     app = QApplication([])
-    w = PointWidget('sample', make_plaintext_button=True, scrollable=True)
+    w = PointWidget('sample', scrollable=True)
     w.show()
     res = app.exec_()
     print(w.value())

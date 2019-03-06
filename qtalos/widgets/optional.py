@@ -5,8 +5,11 @@ from typing import Optional, TypeVar, Generic, Callable
 from itertools import chain
 from functools import wraps, partial
 
-from PyQt5.QtCore import QObject, QEvent
-from PyQt5.QtWidgets import QCheckBox, QHBoxLayout, QWidget, QApplication
+from qtalos.backend import \
+    \
+    QCheckBox, QHBoxLayout, QWidget, QApplication,\
+    \
+    QObject, QEvent
 
 from qtalos import ValueWidget, PlaintextPrintError, none_parser
 from qtalos.widgets.idiomatic_inner import get_idiomatic_inner_widgets
@@ -38,9 +41,9 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
 
         inner = inner or self.make_inner()
 
-        kwargs.setdefault('make_plaintext_button', inner.make_plaintext_button)
-        kwargs.setdefault('make_validator_label', inner.make_validator_label)
-        kwargs.setdefault('make_title_label', inner.make_title_label)
+        kwargs.setdefault('make_plaintext', inner.make_plaintext)
+        kwargs.setdefault('make_indicator', inner.make_indicator)
+        kwargs.setdefault('make_title', inner.make_title)
 
         super().__init__(inner.title, auto_func=inner.auto_func, **kwargs)
 
@@ -146,12 +149,9 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
 
 
 if __name__ == '__main__':
-    #from PyQt5.QtWidgets import QApplication
     from qtalos.widgets import *
 
     app = QApplication([])
-    # w = OptionalValueWidget(LineEdit('sample', pattern='(a[^a]*a|[^a])*'), default_state=False)
-    # w = OptionalValueWidget(FilePathWidget('t'))
     w = OptionalValueWidget(IntEdit('source ovr', placeholder=False))
     w.show()
     res = app.exec_()

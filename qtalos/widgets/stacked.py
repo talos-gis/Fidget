@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TypeVar, Generic, Iterable, Tuple, Union, Callable, Type, List
 
 from collections import namedtuple
-from functools import wraps
+from functools import partial, wraps
 from abc import abstractmethod
 
-from PyQt5.QtWidgets import QVBoxLayout, QStackedWidget, QComboBox, QFrame, QRadioButton, QGroupBox, QCheckBox
+from qtalos.backend import QVBoxLayout, QStackedWidget, QComboBox, QFrame, QRadioButton, QGroupBox, QCheckBox
 
 from qtalos import ValueWidget, ParseError
 from qtalos.widgets.idiomatic_inner import get_idiomatic_inner_widgets
@@ -17,6 +17,8 @@ T = TypeVar('T')
 
 class StackedValueWidget(Generic[T], ValueWidget[T]):
     class Selector(ValueWidget[int]):
+        MAKE_INDICATOR = MAKE_PLAINTEXT = MAKE_TITLE = False
+
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.options = {}
@@ -174,7 +176,7 @@ class StackedValueWidget(Generic[T], ValueWidget[T]):
         layout = layout_cls()
 
         with self.setup_provided(master_layout, layout):
-            self.selector = self.selector_cls('select option', make_validator_label=False, make_title_label=False)
+            self.selector = self.selector_cls('select option')
             self.stacked = QStackedWidget()
 
             for name, option in self.options.items():
@@ -200,15 +202,16 @@ class StackedValueWidget(Generic[T], ValueWidget[T]):
         return self.current_subwidget().plaintext_printers()
 
     def plaintext_parsers(self):
+        def parser_wrap(option_name, parser, *args, **kwargs):
+            return self.targeted_fill(option_name=option_name, value=parser(*args, **kwargs))
+
         current = self.current_subwidget()
         yield from current.plaintext_parsers()
         for n, o in self.options.items():
             if o is current:
                 continue
             for p in o.plaintext_parsers():
-                @wraps(p)
-                def new_parser(*args, **kwargs):
-                    return self.targeted_fill(option_name=n, value=p(*args, **kwargs))
+                new_parser = partial(parser_wrap, n, p)
 
                 new_parser.__name__ = n + ': ' + p.__name__
                 yield new_parser
@@ -232,7 +235,7 @@ class StackedValueWidget(Generic[T], ValueWidget[T]):
 
     def _selector_changed(self):
         state, index, _ = self.selector.value()
-        if state < 0:
+        if not state.is_ok():
             raise index
         self.stacked.setCurrentIndex(index)
         self.change_value()
@@ -252,7 +255,7 @@ class StackedValueWidget(Generic[T], ValueWidget[T]):
 
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication, QHBoxLayout
+    from qtalos.backend import QApplication, QHBoxLayout
 
     from qtalos.widgets import ValueCheckBox, ValueCombo, IntEdit
 
@@ -261,7 +264,7 @@ if __name__ == '__main__':
         IntEdit('raw text'),
         ValueCheckBox('sign', (0, 1)),
         ValueCombo('named', [('dozen', 12), ('one', 1), ('seven', 7)])
-    ], make_plaintext_button=True, frame_style=QFrame.Box, selector_cls=StackedValueWidget.RadioSelector,
+    ], make_plaintext=True, frame_style=QFrame.Box, selector_cls=StackedValueWidget.RadioSelector,
                            layout_cls=QHBoxLayout)
     w.show()
     res = app.exec_()

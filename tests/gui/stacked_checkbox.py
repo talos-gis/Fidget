@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QHBoxLayout, QFrame
+from qtalos.backend import QApplication, QHBoxLayout, QFrame
 
 from qtalos.widgets import LabelValueWidget, IntEdit, StackedValueWidget
 
@@ -8,7 +8,7 @@ if __name__ == '__main__':
     w = StackedValueWidget('number', [
         IntEdit('raw text'),
         LabelValueWidget('auto', ('auto', 123456))
-    ], make_plaintext_button=True, frame_style=QFrame.Box, selector_cls=StackedValueWidget.CheckBoxSelector,
+    ], make_plaintext=True, frame_style=QFrame.Box, selector_cls=StackedValueWidget.CheckBoxSelector,
                            layout_cls=QHBoxLayout)
     w.show()
     res = app.exec_()

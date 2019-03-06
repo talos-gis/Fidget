@@ -1,6 +1,6 @@
 from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List, Callable
 
-from PyQt5.QtWidgets import QComboBox, QHBoxLayout
+from qtalos.backend import QComboBox, QHBoxLayout
 
 from qtalos import ValueWidget, PlaintextPrintError, InnerPlaintextParser, PlaintextParseError, ParseError
 
@@ -126,7 +126,7 @@ class ValueEditCombo(Generic[T], ValueWidget[T]):
 
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    from qtalos.backend import QApplication
     from qtalos import wrap_parser
 
     app = QApplication([])

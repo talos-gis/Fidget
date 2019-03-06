@@ -2,18 +2,16 @@ from typing import Optional, Pattern, Union
 
 import re
 
-from PyQt5.QtWidgets import QLineEdit, QHBoxLayout
+from qtalos.backend import QLineEdit, QHBoxLayout
 
 from qtalos import ValueWidget, InnerPlaintextParser, ValidationError, PlaintextParseError
 
 
 class LineEdit(ValueWidget[str]):
+    MAKE_INDICATOR = MAKE_TITLE = MAKE_PLAINTEXT = False
+
     def __init__(self, title: str, *args, pattern: Union[str, Pattern[str]] = None, placeholder=True,
                  **kwargs):
-        kwargs.setdefault('make_validator_label', pattern is not None)
-        if placeholder:
-            kwargs.setdefault('make_title_label', False)
-
         super().__init__(title, *args, **kwargs)
 
         provided_pattern = self.make_pattern()
@@ -62,7 +60,7 @@ class LineEdit(ValueWidget[str]):
 
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    from qtalos.backend import QApplication
 
     app = QApplication([])
     w = LineEdit('sample', pattern='(a[^a]*a|[^a])*')

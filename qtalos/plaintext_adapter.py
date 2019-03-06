@@ -33,6 +33,9 @@ def regex_parser(*patterns: Union[Pattern[str], str], name=...) \
                     return func(m)
             raise PlaintextParseError('string did not match pattern')
 
+        if name is not ...:
+            ret.__name__ = name
+
         return ret
 
     return ret
@@ -48,7 +51,8 @@ def json_parser(acceptable_types=(str, dict, list, int, float)):
                 raise PlaintextParseError(...) from e
             else:
                 if not isinstance(json_obj, acceptable_types):
-                    raise PlaintextParseError(f'object is not of an acceptable type (expected {acceptable_types}, got {type(json_obj)})')
+                    raise PlaintextParseError(
+                        f'object is not of an acceptable type (expected {acceptable_types}, got {type(json_obj)})')
                 return func(json_obj)
 
         return ret

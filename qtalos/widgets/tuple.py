@@ -4,7 +4,7 @@ from typing import Callable, Iterable, Tuple
 import json
 from functools import wraps
 
-from PyQt5.QtWidgets import QVBoxLayout, QFrame
+from qtalos.backend import QVBoxLayout, QFrame
 
 from qtalos import ValueWidget, ParseError, ValidationError, InnerPlaintextParser, InnerPlaintextPrinter, \
     PlaintextPrintError, PlaintextParseError
@@ -146,20 +146,24 @@ class TupleWidget(ValueWidget[Tuple]):
 
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication, QHBoxLayout
+    from qtalos.backend import QApplication, QHBoxLayout
     from qtalos.widgets import IntEdit
 
 
     class PointWidget(TupleWidget):
+        MAKE_PLAINTEXT = True
+        MAKE_INDICATOR = True
+        MAKE_TITLE = True
+
         default_layout_cls = QHBoxLayout
 
         def make_inner(self):
-            yield IntEdit('X', make_validator_label=False)
-            yield IntEdit('Y', make_validator_label=False)
+            yield IntEdit('X', make_indicator=False)
+            yield IntEdit('Y', make_indicator=False)
 
 
     app = QApplication([])
-    w = PointWidget('sample', make_plaintext_button=True)
+    w = PointWidget('sample')
     w.show()
     res = app.exec_()
     print(w.value())

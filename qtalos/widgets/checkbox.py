@@ -1,18 +1,20 @@
 from typing import TypeVar, Generic, Tuple, Union, Mapping
 
-from PyQt5.QtWidgets import QCheckBox, QHBoxLayout
+from qtalos.backend import QCheckBox, QHBoxLayout
 
-from qtalos import ValueWidget
+from qtalos import ValueWidget, InnerPlaintextParser, PlaintextPrintError, PlaintextParseError
 
 T = TypeVar('T')
 
 
 class ValueCheckBox(Generic[T], ValueWidget[T]):
     NO_DEFAULT_VALUE = object()
+    MAKE_INDICATOR = False
+    MAKE_TITLE = False
+    MAKE_PLAINTEXT = False
 
     def __init__(self, title, value_selector: Union[Tuple[T, T], Mapping[bool, T]] = (False, True),
                  initial: bool = False, **kwargs):
-        kwargs.setdefault('make_validator_label', False)
         super().__init__(title, **kwargs)
 
         self.value_selector = value_selector
@@ -54,9 +56,29 @@ class ValueCheckBox(Generic[T], ValueWidget[T]):
 
         self.checkbox.setChecked(v)
 
+    @InnerPlaintextParser
+    def from_values(self, text):
+        for printer in self.plaintext_printers():
+            try:
+                true_text = printer(self.true_val)
+            except PlaintextPrintError:
+                pass
+            else:
+                if true_text == text:
+                    return self.true_val
+
+            try:
+                true_text = printer(self.false_val)
+            except PlaintextPrintError:
+                pass
+            else:
+                if true_text == text:
+                    return self.false_val
+        raise PlaintextParseError('text did not match any printed value')
+
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    from qtalos.backend import QApplication
     from enum import Enum, auto
 
 

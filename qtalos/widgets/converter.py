@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TypeVar, Generic, Callable, Optional
 
 from functools import wraps
-from PyQt5.QtWidgets import QHBoxLayout
+from qtalos.backend import QHBoxLayout
 
 from qtalos import ValueWidget, ParseError, PlaintextParseError
 from qtalos.widgets.idiomatic_inner import get_idiomatic_inner_widgets
@@ -25,8 +25,8 @@ class ConverterWidget(Generic[F, T], ValueWidget[T]):
 
         inner = inner or self.make_inner()
 
-        super().__init__(inner.title, make_plaintext_button=False, make_validator_label=False, make_title_label=False,
-                         make_auto_button=False, **kwargs)
+        super().__init__(inner.title, make_plaintext=False, make_indicator=False, make_title=False,
+                         make_auto=False, **kwargs)
 
         self.inner = inner
         self.converter_func = converter_func
@@ -44,23 +44,23 @@ class ConverterWidget(Generic[F, T], ValueWidget[T]):
         self.setMaximumSize(self.inner.maximumSize())
 
         if self.inner.title_label:
-            self.make_title_label = True
+            self.make_title = True
 
         if self.inner.auto_button:
             self.inner.auto_button.clicked.disconnect(self.inner._auto_btn_click)
             self.inner.auto_button.clicked.connect(self._auto_btn_click)
-            self.make_auto_button = True
+            self.make_auto = True
 
         if self.inner.plaintext_button:
             self.inner.plaintext_button.clicked.disconnect(self.inner._plaintext_btn_click)
             self.inner.plaintext_button.clicked.connect(self._plaintext_btn_click)
             self._plaintext_widget = self.inner._plaintext_widget
-            self.make_plaintext_button = True
+            self.make_plaintext = True
 
-        if self.inner.validation_label:
-            self.inner.validation_label.mousePressEvent = self._detail_button_clicked
-            self.validation_label = self.inner.validation_label
-            self.make_validator_label = True
+        if self.inner.indicator_label:
+            self.inner.indicator_label.mousePressEvent = self._detail_button_clicked
+            self.indicator_label = self.inner.indicator_label
+            self.make_indicator = True
 
         self.inner.on_change.connect(self.change_value)
 
@@ -141,12 +141,12 @@ class ConverterWidget(Generic[F, T], ValueWidget[T]):
 
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    from qtalos.backend import QApplication
     from qtalos import wrap_parser
     from qtalos.widgets import LineEdit
 
     app = QApplication([])
-    w = ConverterWidget(LineEdit('sample', pattern='(a[^a]*a|[^a])*', make_plaintext_button=True),
+    w = ConverterWidget(LineEdit('sample', pattern='(a[^a]*a|[^a])*', plaintext_button=True),
                         converter_func=wrap_parser(ValueError, int),
                         back_converter_func=str)
     w.show()

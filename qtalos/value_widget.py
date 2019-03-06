@@ -7,9 +7,14 @@ from enum import IntEnum
 from contextlib import contextmanager
 from pathlib import Path
 
-from PyQt5.QtWidgets import QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
-    QMessageBox, QDialog, QFileDialog, QGroupBox, QGridLayout
-from PyQt5.QtCore import Qt, pyqtSignal
+from qtalos.backend import \
+ \
+    QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
+    QMessageBox, QDialog, QFileDialog, QGroupBox, QGridLayout, \
+ \
+    Qt, pyqtSignal, \
+ \
+    __backend__
 
 from qtalos.plaintext_adapter import PlaintextPrinter, PlaintextParser, PlaintextParseError, PlaintextPrintError, \
     join_parsers, join_printers, InnerPlaintextParser, InnerPlaintextPrinter
@@ -26,6 +31,9 @@ class ValueState(IntEnum):
     invalid = -1
     unparsable = -2
 
+    def is_ok(self):
+        return self > 0
+
 
 class ValueWidget(QWidget, Generic[T]):
     # todo help
@@ -35,6 +43,7 @@ class ValueWidget(QWidget, Generic[T]):
     # region inherit_me
     """
     How do I inherit ValueWidget?
+    * MAKE_TITLE, MAKE_INDICATOR, MAKE_PLAINTEXT, set these for true or false to implement default values.
     * __init__: Call super().__init__ and all's good.
         Don't fill validation_func or auto_func here, instead re-implement validate.
         At the end of your __init__, call init_ui **only if your class isn't going to be subclassed**.
@@ -57,25 +66,46 @@ class ValueWidget(QWidget, Generic[T]):
         * NOTE: you can also just wrap class function with InnerParser / InnerPrinter
     * fill: optional, set the widget's values based on a value
     """
+    MAKE_TITLE = None
+    MAKE_INDICATOR = None
+    MAKE_PLAINTEXT = None
 
     def __init__(self, title,
                  *args,
                  validation_func: Callable[[T], None] = None,
                  auto_func: Callable[[], T] = None,
-                 make_title_label=True,
-                 make_validator_label=False,
-                 make_plaintext_button=False,
-                 make_auto_button=...,
+                 make_title=...,
+                 make_indicator=...,
+                 make_plaintext=...,
+                 make_auto=...,
+                 help: str = None,
                  **kwargs):
-        if kwargs.get('flags', object()) is None:
-            kwargs['flags'] = Qt.WindowFlags()
-        super().__init__(*args, **kwargs)
-        self.title = title
-        self.make_title_label = make_title_label
-        self.make_validator_label = make_validator_label
-        self.make_plaintext_button = make_plaintext_button
+        def default_check(name, param, default):
+            if param is ...:
+                if default is None:
+                    raise Exception(f'{name} not provided')
+                return default
+            return param
 
-        self.validation_label: Optional[QLabel] = None
+        if kwargs.get('flags', ()) is None:
+            kwargs['flags'] = Qt.WindowFlags()
+
+        if 'flags' in kwargs and __backend__.__name__ == 'PySide2':
+            kwargs['f'] = kwargs.pop('flags')
+
+        try:
+            super().__init__(*args, **kwargs)
+        except TypeError:
+            print(f'args: {args}, kwargs: {kwargs}')
+            raise
+        self.title = title
+        self.help = help
+
+        self.make_title = default_check('make_title', make_title, self.MAKE_TITLE)
+        self.make_indicator = default_check('make_indicator', make_indicator, self.MAKE_INDICATOR)
+        self.make_plaintext = default_check('make_plaintext', make_plaintext, self.MAKE_PLAINTEXT)
+
+        self.indicator_label: Optional[QLabel] = None
         self.auto_button: Optional[QPushButton] = None
         self.plaintext_button: Optional[QPushButton] = None
         self.title_label: Optional[QLabel] = None
@@ -92,34 +122,38 @@ class ValueWidget(QWidget, Generic[T]):
         self._joined_plaintext_printer = None
         self._joined_plaintext_parser = None
 
-        if make_auto_button is ...:
+        if make_auto is ...:
             if self.auto_func:
                 if self.fill is None:
                     raise Exception('auto_func can only be used on a ValueWidget with an implemented fill method')
                 else:
-                    self.make_auto_button = True
+                    self.make_auto = True
             else:
-                self.make_auto_button = False
+                self.make_auto = False
         else:
-            self.make_auto_button = make_auto_button
+            self.make_auto = make_auto
 
     def init_ui(self):
-        if self.make_validator_label:
-            self.validation_label = QLabel('')
-            self.validation_label.mousePressEvent = self._detail_button_clicked
+        self.setWindowTitle(self.title)
 
-        if self.make_auto_button:
+        if self.make_indicator:
+            self.indicator_label = QLabel('')
+            self.indicator_label.mousePressEvent = self._detail_button_clicked
+
+        if self.make_auto:
             self.auto_button = QPushButton('auto')
             self.auto_button.clicked.connect(self._auto_btn_click)
 
-        if self.make_plaintext_button:
+        if self.make_plaintext:
             self.plaintext_button = QPushButton('text')
             self.plaintext_button.clicked.connect(self._plaintext_btn_click)
 
-            self._plaintext_widget = PlaintextEditWidget(self, make_validator_label=True)
+            self._plaintext_widget = PlaintextEditWidget()
 
-        if self.make_title_label:
+        if self.make_title:
             self.title_label = QLabel(self.title)
+            if self.help:
+                self.title_label.mousePressEvent = self._help_clicked
 
     fill: Optional[Callable[[ValueWidget[T], T], None]] = None
 
@@ -177,14 +211,14 @@ class ValueWidget(QWidget, Generic[T]):
 
     def provided_post(self, exclude=()):
         return (yield from (
-            y for y in (self.validation_label,
+            y for y in (self.indicator_label,
                         self.auto_button,
                         self.plaintext_button)
             if y and y not in exclude
         ))
 
     @contextmanager
-    def setup_provided(self, pre_layout, post_layout=..., exclude=()):
+    def setup_provided(self, pre_layout: QVBoxLayout, post_layout=..., exclude=()):
         for p in self.provided_pre(exclude=exclude):
             pre_layout.addWidget(p)
         yield
@@ -214,7 +248,8 @@ class ValueWidget(QWidget, Generic[T]):
         self.on_change.emit()
 
     def __str__(self):
-        return super().__str__()+': '+self.title
+        return super().__str__() + ': ' + self.title
+
     # endregion
 
     def _invalidate_value(self):
@@ -233,8 +268,7 @@ class ValueWidget(QWidget, Generic[T]):
 
     def _plaintext_btn_click(self):
         self._plaintext_widget.prep_for_show(self)
-        if self._plaintext_widget.exec_() == QDialog.Accepted:
-            self.fill(self._plaintext_widget.result_value)
+        self._plaintext_widget.show()
 
     def _update_indicator(self, *args, **kwargs):
         if self._suppress_update:
@@ -242,16 +276,16 @@ class ValueWidget(QWidget, Generic[T]):
 
         state, val, details = self._value = self.value()
 
-        if self.validation_label and self.validation_label.parent():
-            if state == ValueState.ok:
+        if self.indicator_label and self.indicator_label.parent():
+            if state.is_ok():
                 text = 'OK'
                 tooltip = str(val)
             else:
                 text = 'ERR'
                 tooltip = error_tooltip(val)
 
-            self.validation_label.setText(text)
-            self.validation_label.setToolTip(tooltip)
+            self.indicator_label.setText(text)
+            self.indicator_label.setToolTip(tooltip)
 
         if self.plaintext_button and self.plaintext_button.parent():
             self.plaintext_button.setEnabled(state == ValueState.ok or any(self.plaintext_parsers()))
@@ -279,6 +313,10 @@ class ValueWidget(QWidget, Generic[T]):
     def _detail_button_clicked(self, event):
         if self._value[-1]:
             QMessageBox.information(self, 'validation details', self._value[-1])
+
+    def _help_clicked(self, event):
+        if self.help:
+            QMessageBox.information(self, self.title, self.help)
 
     _inner_printers: Iterable[PlaintextPrinter[T]] = ()
     _inner_parsers: Iterable[PlaintextParser[T]] = ()
@@ -311,32 +349,40 @@ class DoNotFill(Exception):
     pass
 
 
-class ValueDialog(Generic[T], QDialog, ValueWidget[T]):
-    @abstractmethod
-    def parse(self) -> T:
-        pass
+class PlaintextEditWidget(Generic[T], ValueWidget[T]):
+    class _ShiftEnterIgnoringPlainTextEdit(QPlainTextEdit):
+        def keyPressEvent(self, event):
+            if (event.modifiers() == Qt.ShiftModifier and event.key() == Qt.Key_Return) \
+                    or (event.modifiers() == Qt.KeypadModifier | Qt.ShiftModifier and event.key() == Qt.Key_Enter):
+                event.ignore()
+            else:
+                return super().keyPressEvent(event)
 
-
-class PlaintextEditWidget(Generic[T], ValueDialog[T]):
-    # todo apply button
-    # todo disable OK on invalid val
     NO_CURRENT_VALUE = object()
 
-    def __init__(self, owner: ValueWidget[T], *args, **kwargs):
-        kwargs.setdefault('make_title_label', False)
-        super().__init__('plaintext edit for ' + owner.title, *args, **kwargs)
+    MAKE_INDICATOR = True
+
+    MAKE_PLAINTEXT = False
+    MAKE_TITLE = False
+
+    def __init__(self, *args, **kwargs):
+        # todo set window title?
+        kwargs.setdefault('make_title', False)
+        super().__init__('plaintext edit', *args, **kwargs)
 
         self.current_value: T = self.NO_CURRENT_VALUE
 
         self.print_widget: QWidget = None
         self.print_edit: QPlainTextEdit = None
         self.print_combo: QComboBox = None
+        self.ok_button: QPushButton = None
+        self.apply_button: QPushButton = None
 
         self.parse_widget: QWidget = None
-        self.parse_edit: QPlainTextEdit = None
+        self.parse_edit: PlaintextEditWidget._ShiftEnterIgnoringPlainTextEdit = None
         self.parse_combo: QComboBox = None
 
-        self.result_value: T = None
+        self.owner: Optional[ValueWidget[T]] = None
 
         self.init_ui()
 
@@ -354,9 +400,17 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
 
         self.print_edit = QPlainTextEdit()
         self.print_edit.setReadOnly(True)
-        self.print_combo = QComboBox()
         print_layout.addWidget(self.print_edit)
-        print_layout.addWidget(self.print_combo)
+
+        print_extras_layout = QGridLayout()
+
+        self.print_combo = QComboBox()
+        file_button = QPushButton('to file...')
+        file_button.clicked.connect(self.save_file)
+        print_extras_layout.addWidget(file_button, 0, 0)
+        print_extras_layout.addWidget(self.print_combo, 1, 0)
+
+        print_layout.addLayout(print_extras_layout)
 
         master_layout.addWidget(self.print_widget)
 
@@ -366,7 +420,7 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
         parse_layout = QHBoxLayout()
         parse_master_layout.addLayout(parse_layout)
 
-        self.parse_edit = QPlainTextEdit()
+        self.parse_edit = self._ShiftEnterIgnoringPlainTextEdit()
         self.parse_edit.textChanged.connect(self.change_value)
         self.print_combo.currentIndexChanged[int].connect(self.update_print)
         parse_layout.addWidget(self.parse_edit)
@@ -377,20 +431,26 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
         self.parse_combo.currentIndexChanged[int].connect(self.change_value)
         parse_extras_layout.addWidget(self.parse_combo, 0, 0)
 
-        if self.validation_label:
-            parse_extras_layout.addWidget(self.validation_label, 0, 1)
+        if self.indicator_label:
+            parse_extras_layout.addWidget(self.indicator_label, 0, 1)
 
         file_button = QPushButton('from file...')
         file_button.clicked.connect(self.load_file)
-        parse_extras_layout.addWidget(file_button, 1, 0)
+        parse_extras_layout.addWidget(file_button, 1, 0, 1, 2)
 
-        ok_button = QPushButton('OK')
-        ok_button.clicked.connect(self.commit_parse)
-        parse_extras_layout.addWidget(ok_button, 1, 1)
+        self.apply_button = QPushButton('apply')
+        self.apply_button.clicked.connect(self.apply_parse)
+        parse_extras_layout.addWidget(self.apply_button, 2, 0)
+
+        self.ok_button = QPushButton('OK')
+        self.ok_button.clicked.connect(self.commit_parse)
+        parse_extras_layout.addWidget(self.ok_button, 2, 1)
 
         parse_layout.addLayout(parse_extras_layout)
 
         master_layout.addWidget(self.parse_widget)
+
+        self.on_change.connect(self._on_value_change)
 
     def parse(self):
         parser: PlaintextParser = self.parse_combo.currentData()
@@ -414,6 +474,16 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
         else:
             self.parse_edit.setPlainText(text)
 
+    def save_file(self, *args):
+        filename, _ = QFileDialog.getSaveFileName(self, 'save file', filter='text files (*.txt *.csv);;all files (*.*)')
+        if not filename:
+            return
+
+        try:
+            Path(filename).write_text(self.print_edit.toPlainText())
+        except IOError as e:
+            QMessageBox.critical(self, 'could not write to file', str(e))
+
     def update_print(self, *args):
         if self.current_value is self.NO_CURRENT_VALUE:
             text = '<no current value>'
@@ -429,15 +499,28 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
 
         self.print_edit.setPlainText(text)
 
-    def prep_for_show(self, owner: ValueWidget[T]):
+    def prep_for_show(self, owner: ValueWidget[T], clear_parse=True, clear_print=True):
+        self.owner = owner
+
+        self.setWindowTitle('plaintext edit for ' + owner.title)
+
         state, self.current_value, _ = owner.value()
-        if state < 0:
+        if not state.is_ok():
             self.print_widget.setVisible(False)
             printers = False
         else:
             self.print_widget.setVisible(True)
             printers = list(owner.plaintext_printers())
             # setup the print
+
+            combo_index = 0
+            if clear_print:
+                pass
+            else:
+                combo_index = self.print_combo.currentIndex()
+                if combo_index == -1:
+                    combo_index = 0
+
             self.print_combo.clear()
             if len(printers) > 1:
                 self.print_combo.setVisible(True)
@@ -447,17 +530,27 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
 
             for printer in printers:
                 self.print_combo.addItem(printer.__name__, printer)
-            self.print_combo.setCurrentIndex(0)
+
+            self.print_combo.setCurrentIndex(combo_index)
 
         parsers = list(owner.plaintext_parsers())
         if not parsers:
             self.parse_widget.setVisible(False)
         else:
             if not owner.fill:
-                raise Exception(f'parsers are defined but the widget has no implemented fill method (in widget {owner})')
+                raise Exception(
+                    f'parsers are defined but the widget has no implemented fill method (in widget {owner})')
 
             self.parse_widget.setVisible(True)
-            self.parse_edit.clear()
+            combo_index = 0
+
+            if clear_parse:
+                self.parse_edit.clear()
+            else:
+                combo_index = self.parse_combo.currentIndex()
+                if combo_index == -1:
+                    combo_index = 0
+
             self.parse_combo.clear()
             if len(parsers) > 1:
                 self.parse_combo.setVisible(True)
@@ -467,19 +560,27 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
 
             for parser in parsers:
                 self.parse_combo.addItem(parser.__name__, parser)
-            self.parse_combo.setCurrentIndex(0)
+            self.parse_combo.setCurrentIndex(combo_index)
 
         if not printers and not parsers:
             raise ValueError('plaintext edit widget prepped for owner without plaintext adapters')
 
     def commit_parse(self):
-        try:
-            self.result_value = self.parse()
-        except ParseError as e:
-            QMessageBox.critical(self, 'error during parse', error_details(e))
+        status, value, _ = self.value()
+        if not status.is_ok():
+            QMessageBox.critical(self, 'error parsing plaintext', error_details(self.result_value))
         else:
-            self.result_outcome = True
-            self.accept()
+            self.owner.fill(value)
+            self.close()
+
+    def apply_parse(self):
+        status, value, _ = self.value()
+        if not status.is_ok():
+            QMessageBox.critical(self, 'error parsing plaintext', error_details(self.result_value))
+        else:
+            self.owner.fill(value)
+            self.prep_for_show(self.owner, clear_parse=False, clear_print=False)
+            self.parse_edit.setFocus()
 
     @property
     def has_parse(self):
@@ -488,3 +589,18 @@ class PlaintextEditWidget(Generic[T], ValueDialog[T]):
     @property
     def has_print(self):
         return bool(self.printers)
+
+    def _on_value_change(self, *a):
+        state, _, _ = self.value()
+
+        self.ok_button.setEnabled(state.is_ok())
+        self.apply_button.setEnabled(state.is_ok())
+
+    def keyPressEvent(self, event):
+        if (event.modifiers() == Qt.ShiftModifier and event.key() == Qt.Key_Return) \
+                or (event.modifiers() == Qt.KeypadModifier | Qt.ShiftModifier and event.key() == Qt.Key_Enter):
+            self.ok_button.click()
+        elif not event.modifiers() and event.key() == Qt.Key_Escape:
+            self.close()
+        else:
+            super().keyPressEvent(event)

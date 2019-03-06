@@ -11,9 +11,9 @@ T = TypeVar('T')
 def simple_edit(converter_func: Callable[[str], T], name=...):
     class Ret(ConverterWidget[str, T]):
         def __init__(self, title, **kwargs):
-            line_edit_args = {'make_validator_label': True}
+            line_edit_args = {'make_indicator': False}
 
-            for k in ('make_title_label', 'make_plaintext_button', 'make_auto_button', 'make_validator_label',
+            for k in ('make_title', 'make_plaintext', 'make_auto', 'make_indicator',
                       'pattern', 'convert', 'back_convert', 'placeholder'):
                 if k in kwargs:
                     line_edit_args[k] = kwargs[k]
@@ -41,10 +41,10 @@ FloatEdit = simple_edit(wrap_parser(ValueError, float))
 ComplexEdit = simple_edit(wrap_parser(ValueError, complex))
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    from qtalos.backend import QApplication
 
     app = QApplication([])
-    w = ComplexEdit('sample', make_plaintext_button=True)
+    w = ComplexEdit('sample', make_plaintext=True)
     w.show()
     res = app.exec_()
     print(w.value())
