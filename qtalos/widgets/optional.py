@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import Optional, TypeVar, Generic, Callable
 
 from itertools import chain
-from functools import wraps
+from functools import wraps, partial
 
-from PyQt5.QtWidgets import QCheckBox, QHBoxLayout
+from PyQt5.QtCore import QObject, QEvent
+from PyQt5.QtWidgets import QCheckBox, QHBoxLayout, QWidget, QApplication
 
 from qtalos import ValueWidget, PlaintextPrintError, none_parser
 from qtalos.widgets.idiomatic_inner import get_idiomatic_inner_widgets
@@ -15,6 +16,20 @@ T = TypeVar('T')
 
 
 class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
+    class MouseWarden(QObject):
+        def __init__(self, *args, target, dispatch, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.target = target
+            self.dispatch = dispatch
+
+        def eventFilter(self, obj, event):
+            if obj.isWidgetType() and event.type() == QEvent.MouseButtonPress:
+                if self.target in obj.window().findChildren(QWidget) \
+                        and self.target.underMouse() and not self.target.isEnabled():
+                    self.dispatch()
+                obj.setFocus()
+            return super().eventFilter(obj, event)
+
     def __init__(self, inner: ValueWidget[T] = None, default_state=False, layout_cls=..., none_value=None, **kwargs):
         if (inner is None) == (self.make_inner is None):
             if inner:
@@ -31,6 +46,7 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
 
         self.inner = inner
         self.not_none_checkbox: QCheckBox = None
+        self.warden : OptionalValueWidget.MouseWarden = None
 
         self.none_value = none_value
 
@@ -61,6 +77,9 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
             self.inner.setEnabled(False)
 
             layout.addWidget(self.inner)
+
+        self.warden = self.MouseWarden(target=self.inner, dispatch=partial(self.not_none_checkbox.setChecked, True))
+        QApplication.instance().installEventFilter(self.warden)
 
     def parse(self):
         if self.not_none_checkbox.isChecked():
@@ -107,13 +126,6 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
         self.inner.setEnabled(enable)
         self.change_value()
 
-    def mousePressEvent(self, a0):
-        # todo this solution has a bunch of problems
-        if not self.inner.isEnabled() and self.inner.underMouse():
-            self.not_none_checkbox.setChecked(True)
-            self.inner.setFocus()
-        super().mousePressEvent(a0)
-
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         idiomatic_inners = list(get_idiomatic_inner_widgets(cls))
@@ -134,12 +146,12 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
 
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    #from PyQt5.QtWidgets import QApplication
     from qtalos.widgets import *
 
     app = QApplication([])
-    #w = OptionalValueWidget(LineEdit('sample', pattern='(a[^a]*a|[^a])*'), default_state=False)
-    #w = OptionalValueWidget(FilePathWidget('t'))
+    # w = OptionalValueWidget(LineEdit('sample', pattern='(a[^a]*a|[^a])*'), default_state=False)
+    # w = OptionalValueWidget(FilePathWidget('t'))
     w = OptionalValueWidget(IntEdit('source ovr', placeholder=False))
     w.show()
     res = app.exec_()

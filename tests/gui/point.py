@@ -4,6 +4,8 @@ from PyQt5.QtWidgets import QLineEdit, QHBoxLayout
 
 from qtalos import ValueWidget, regex_parser, json_parser, PlaintextParseError, ParseError, wrap_plaintext_parser
 
+from tests.gui.__util__ import test_as_main
+
 point_pat = r'(?P<x>[0-9\.]+)\s*,\s*(?P<y>[0-9\.]+)'
 
 
@@ -42,6 +44,7 @@ def json_dict(m: dict):
     return parse_point(x, y)
 
 
+@test_as_main('sample', make_plaintext_button=True)
 class PointWidget(ValueWidget[Tuple[float, float]]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -87,14 +90,3 @@ class PointWidget(ValueWidget[Tuple[float, float]]):
         x, y = t
         self.x_edit.setText(str(x))
         self.y_edit.setText(str(y))
-
-
-if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
-
-    app = QApplication([])
-    w = PointWidget('sample', make_plaintext_button=True)
-    w.show()
-    res = app.exec_()
-    print(w.value())
-    exit(res)

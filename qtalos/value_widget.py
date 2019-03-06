@@ -318,6 +318,8 @@ class ValueDialog(Generic[T], QDialog, ValueWidget[T]):
 
 
 class PlaintextEditWidget(Generic[T], ValueDialog[T]):
+    # todo apply button
+    # todo disable OK on invalid val
     NO_CURRENT_VALUE = object()
 
     def __init__(self, owner: ValueWidget[T], *args, **kwargs):
