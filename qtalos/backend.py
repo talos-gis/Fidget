@@ -12,6 +12,7 @@ __backend__ = load()
 
 
 QApplication: Type[PyQt5.QtWidgets.QApplication] = __backend__['QtWidgets', 'QApplication']
+QBoxLayout: Type[PyQt5.QtWidgets.QBoxLayout] = __backend__['QtWidgets', 'QBoxLayout']
 QCheckBox: Type[PyQt5.QtWidgets.QCheckBox] = __backend__['QtWidgets', 'QCheckBox']
 QComboBox: Type[PyQt5.QtWidgets.QComboBox] = __backend__['QtWidgets', 'QComboBox']
 QDialog: Type[PyQt5.QtWidgets.QDialog] = __backend__['QtWidgets', 'QDialog']

@@ -1,42 +1,52 @@
 from __future__ import annotations
 
-from typing import Callable, Union, Mapping, Iterable, Tuple
+from typing import Union, Mapping, Iterable, Tuple, TypeVar, Dict, Type, Any
 import json
-from functools import wraps
 
-from qtalos.backend import\
-    QVBoxLayout, QFrame, QScrollArea, QWidget,\
-    \
-    Qt
+from qtalos.backend import \
+    QVBoxLayout, QFrame, QScrollArea, QWidget, QBoxLayout
 
 from qtalos import ValueWidget, ParseError, ValidationError, InnerPlaintextParser, InnerPlaintextPrinter, \
-    PlaintextPrintError, PlaintextParseError
-from qtalos.widgets.idiomatic_inner import get_idiomatic_inner_widgets
-from qtalos.widgets.__util__ import has_init
+    PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
+from qtalos.__util__ import first_valid
+
+from qtalos.widgets.widget_wrappers import MultiWidgetWrapper
+from qtalos.widgets.__util__ import only_valid
+
+T = TypeVar('T')
+NamedTemplate = Union[
+    ValueWidgetTemplate[T], Tuple[str, ValueWidgetTemplate[T]],
+    ValueWidget[T], Tuple[str, ValueWidget[T]]
+]
 
 
-class DictWidget(ValueWidget[Mapping[str, object]]):
-    def __init__(self, title, inner: Iterable[Union[ValueWidget, Tuple[str, ValueWidget]]] = None, frame_style=None,
-                 layout_cls=..., scrollable=False, **kwargs):
+# todo common superclass for this & stacked (&tuple)
+class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
+    def __init__(self, title, inner_templates: Iterable[NamedTemplate] = None, frame_style=None,
+                 layout_cls: Type[QBoxLayout] = None, scrollable=False, **kwargs):
+
+        inner_templates = dict(
+            self._to_name_subtemplate(o) for o in
+            only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES)
+        )
+
+        ValueWidgetTemplate.extract_default(*inner_templates.values(), sink=kwargs, upper_space=self)
+
         super().__init__(title, **kwargs)
-        if (inner is None) == (self.make_inner is None):
-            if inner:
-                raise Exception('inner provided when make_inner is implemented')
-            raise Exception('inner not provided when make_inner is not implemented')
 
-        inner = inner or self.make_inner()
-        self.inner = dict(self._to_name_subwidget(o) for o in inner)
+        self.inner_templates = inner_templates
+
+        self.inners: Dict[str, ValueWidget] = None
 
         self.init_ui(frame_style=frame_style, layout_cls=layout_cls, scrollable=scrollable)
 
-    make_inner: Callable[[DictWidget], Iterable[Union[ValueWidget, Tuple[str, ValueWidget]]]] = None
-    default_layout_cls = QVBoxLayout
+    INNER_TEMPLATES: Iterable[NamedTemplate] = None
+    LAYOUT_CLS = QVBoxLayout
 
-    def init_ui(self, frame_style=None, layout_cls=..., scrollable=False):
+    def init_ui(self, frame_style=None, layout_cls=None, scrollable=False):
         super().init_ui()
 
-        if layout_cls is ...:
-            layout_cls = self.default_layout_cls
+        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
 
         owner = self
         if scrollable:
@@ -61,24 +71,34 @@ class DictWidget(ValueWidget[Mapping[str, object]]):
 
         layout = layout_cls(frame)
 
+        self.inners = {}
         with self.setup_provided(master_layout, layout):
-            for name, option in self.inner.items():
-                option.on_change.connect(self.change_value)
-                layout.addWidget(option)
+            for name, template in self.inner_templates.items():
+                inner = template()
+
+                if self.inners.setdefault(name, inner) is not inner:
+                    raise TypeError(f'duplicate inner name: {name}')
+                inner.on_change.connect(self.change_value)
+                layout.addWidget(inner)
 
         master_layout.addWidget(frame)
 
     @staticmethod
-    def _to_name_subwidget(option: Union[ValueWidget, Tuple[str, ValueWidget]]) -> Tuple[str, ValueWidget]:
+    def _to_name_subtemplate(option: NamedTemplate) -> Tuple[str, ValueWidgetTemplate[T]]:
         try:
-            a, b = option
-        except TypeError:
-            return option.title, option
-        return a, b
+            template = option.template_of()
+        except AttributeError:
+            name, option = option
+            option = option.template_of()
+            return name, option
+
+        if not template.title:
+            raise ValueError(f'stacked option {option} must be ')
+        return template.title, template
 
     def parse(self):
         d = {}
-        for key, subwidget in self.inner.items():
+        for key, subwidget in self.inners.items():
             try:
                 value = subwidget.parse()
             except ParseError as e:
@@ -89,7 +109,7 @@ class DictWidget(ValueWidget[Mapping[str, object]]):
     def validate(self, d: Mapping[str, object]):
         super().validate(d)
         for k, v in d.items():
-            subwidget = self.inner[k]
+            subwidget = self.inners[k]
             try:
                 subwidget.validate(v)
             except ValidationError as e:
@@ -108,7 +128,7 @@ class DictWidget(ValueWidget[Mapping[str, object]]):
         ret = {}
 
         for k, v in d.items():
-            subwidget = self.inner.get(k)
+            subwidget = self.inners.get(k)
             if not subwidget:
                 if exact:
                     raise PlaintextParseError(f'key {k} has no appropriate widget')
@@ -125,6 +145,7 @@ class DictWidget(ValueWidget[Mapping[str, object]]):
 
         return ret
 
+    @explicit
     @InnerPlaintextParser
     def from_json_wildcard(self, v: str):
         return self.from_json(v, exact=False)
@@ -132,7 +153,7 @@ class DictWidget(ValueWidget[Mapping[str, object]]):
     @InnerPlaintextPrinter
     def to_json(self, d: Mapping[str, object]):
         ret = {}
-        for k, subwidget in self.inner.items():
+        for k, subwidget in self.inners.items():
             v = d[k]
             try:
                 s = subwidget.joined_plaintext_printer(v)
@@ -140,7 +161,10 @@ class DictWidget(ValueWidget[Mapping[str, object]]):
                 raise PlaintextPrintError(f'error printing {k}') from e
             ret[k] = s
 
-        return json.dumps(ret)
+        try:
+            return json.dumps(ret)
+        except TypeError as e:
+            raise PlaintextPrintError(...) from e
 
     def plaintext_parsers(self):
         if self.fill:
@@ -148,27 +172,14 @@ class DictWidget(ValueWidget[Mapping[str, object]]):
 
     def _fill(self, d: Mapping[str, object]):
         for k, v in d.items():
-            sw = self.inner[k]
+            sw = self.inners[k]
             sw.fill(v)
 
     @property
     def fill(self):
-        if not all(sw.fill for sw in self.inner.values()):
+        if not all(sw.fill for sw in self.inners.values()):
             return None
         return self._fill
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        idiomatic_inners = list(get_idiomatic_inner_widgets(cls))
-        if idiomatic_inners:
-            if has_init(cls):
-                raise Exception('cannot define idiomatic inner classes inside a class with an __init__')
-
-            @wraps(cls.__init__)
-            def __init__(self, *args, **kwargs):
-                return super(cls, self).__init__(*args, inners=idiomatic_inners, **kwargs)
-
-            cls.__init__ = __init__
 
 
 if __name__ == '__main__':
@@ -181,10 +192,12 @@ if __name__ == '__main__':
         MAKE_TITLE = True
         MAKE_INDICATOR = True
 
-        def make_inner(self):
-            yield FloatEdit('X', make_indicator=False)
-            yield FloatEdit('Y', make_indicator=False)
-            yield OptionalValueWidget(FloatEdit('Z', make_indicator=False))
+        INNER_TEMPLATES = [
+            FloatEdit.template('X'),
+            FloatEdit.template('Y'),
+            OptionalValueWidget.template(
+                FloatEdit.template('Z', make_indicator=False, make_title=False)),
+        ]
 
 
     app = QApplication([])

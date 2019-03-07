@@ -1,14 +1,36 @@
 from typing import Optional
 
 from pathlib import Path
+from glob import iglob
 
-from qtalos.backend import QHBoxLayout, QLineEdit, QFileDialog, QLabel, QPushButton
+from qtalos.backend import QHBoxLayout, QLineEdit, QFileDialog, QPushButton
 
-from qtalos import ValueWidget, ParseError, ValidationError
-from qtalos.__util__ import filename_valid
+from qtalos import ValueWidget, ValidationError, PlaintextParseError
+
+from qtalos.widgets.__util__ import filename_valid
+
+
+def glob_search(pattern):
+    i = iglob(pattern)
+    try:
+        ret = next(i)
+    except StopIteration as e:
+        raise PlaintextParseError('no paths match pattern') from e
+
+    try:
+        next(i)
+    except StopIteration:
+        pass
+    else:
+        raise PlaintextParseError('multiple paths match pattern')
+
+    return Path(ret)
 
 
 class FilePathWidget(ValueWidget[Path]):
+    MAKE_INDICATOR = True
+    MAKE_PLAINTEXT = False
+
     def __init__(self, title: str, parent=None, flags=None, exist_cond: Optional[bool] = True,
                  dialog: QFileDialog = ..., **kwargs):
         super().__init__(title, parent=parent, flags=flags, **kwargs)
@@ -41,10 +63,10 @@ class FilePathWidget(ValueWidget[Path]):
             browse_btn.pressed.connect(self.browse)
             layout.addWidget(browse_btn)
 
-    def browse(self, *args, **kwargs):
+    def browse(self, *a):
         # todo the dialog doesn't stick to a directory
         if self.dialog.exec():
-            self.edit.setText(self.dialog.selectedFiles()[0])
+            self.fill(self.dialog.selectedFiles()[0])
 
     def parse(self):
         return Path(self.edit.text())
@@ -54,7 +76,7 @@ class FilePathWidget(ValueWidget[Path]):
         try:
             exists = value.exists()
         except OSError:
-            raise ParseError('path seems invalid')
+            raise ValidationError('path seems invalid')
 
         if exists:
             if self.exist_cond not in (True, None):
@@ -76,14 +98,17 @@ class FilePathWidget(ValueWidget[Path]):
     def fill(self, v: Path):
         self.edit.setText(str(v))
 
+    def plaintext_parsers(self):
+        yield Path
+        yield glob_search
+        yield from super().plaintext_parsers()
+
 
 if __name__ == '__main__':
     from qtalos.backend import QApplication
 
-    print(Path('.').absolute())
-
     app = QApplication([])
-    w = FilePathWidget('sample')
+    w = FilePathWidget('sample', make_title=True, make_plaintext=True)
     w.show()
     res = app.exec_()
     print(w.value())

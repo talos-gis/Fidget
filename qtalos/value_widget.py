@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from typing import Generic, TypeVar, Optional, Callable, Tuple, Union, Iterable
+from typing import Generic, TypeVar, Optional, Callable, Tuple, Union, Iterable, Type, Dict, Any
 
 from abc import abstractmethod
 from enum import IntEnum
 from contextlib import contextmanager
 from pathlib import Path
+from functools import partial, wraps
+from itertools import chain
 
 from qtalos.backend import \
  \
     QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
-    QMessageBox, QDialog, QFileDialog, QGroupBox, QGridLayout, \
+    QMessageBox, QFileDialog, QGroupBox, QGridLayout, \
  \
     Qt, pyqtSignal, \
  \
@@ -18,7 +20,7 @@ from qtalos.backend import \
 
 from qtalos.plaintext_adapter import PlaintextPrinter, PlaintextParser, PlaintextParseError, PlaintextPrintError, \
     join_parsers, join_printers, InnerPlaintextParser, InnerPlaintextPrinter
-from qtalos.__util__ import error_details, error_tooltip
+from qtalos.__util__ import error_details, error_tooltip, first_valid
 
 T = TypeVar('T')
 
@@ -35,8 +37,72 @@ class ValueState(IntEnum):
         return self > 0
 
 
+class ValueWidgetTemplate(Generic[T]):
+    def __init__(self, widget_cls: Type[ValueWidget[T]], args: Tuple, kwargs: Dict[str, Any]):
+        self.widget_cls = widget_cls
+        self.args = args
+        self.kwargs = kwargs
+
+    @property
+    def title(self):
+        if self.args:
+            ret = self.args[0]
+            if not isinstance(ret, str):
+                raise TypeError('first parameter of a template must be the title string')
+            return ret
+        else:
+            return None
+
+    def _partial(self):
+        return partial(self.widget_cls, *self.args, **self.kwargs)
+
+    def __call__(self, *args, **kwargs) -> ValueWidget[T]:
+        return self._partial()(*args, **kwargs)
+
+    def template(self, *args, **kwargs):
+        args = self.args + args
+        kwargs = {**self.kwargs, **kwargs}
+        return type(self)(self.widget_cls, args, kwargs)
+
+    def template_of(self):
+        return self
+
+    NO_VALUE = object()
+
+    def extract_default(*templates: ValueWidgetTemplate, sink: dict, upper_space, keys: Iterable[str] = ...,
+                        union=True):
+        def combine_key(k):
+            ret = None
+            for t in templates:
+                v = t.kwargs.get(k)
+                if v is None:
+                    v = getattr(t.widget_cls, k.upper(), None)
+                if v is not None:
+                    if v == union:
+                        return union
+                    else:
+                        ret = v
+            return ret
+
+        if keys is ...:
+            keys = ('make_plaintext', 'make_indicator', 'make_title', 'auto_func')
+
+        for k in keys:
+            if k in sink or getattr(upper_space, k.upper(), None) is not None:
+                continue
+            v = combine_key(k)
+            if v is not None:
+                sink[k] = v
+
+    def __repr__(self):
+        params = ', '.join(chain(
+            (repr(a) for a in self.args),
+            (k + '=' + repr(v) for k, v in self.kwargs.items())
+        ))
+        return f'{self.widget_cls.__name__}.template({params})'
+
+
 class ValueWidget(QWidget, Generic[T]):
-    # todo help
     # todo fast/slow validation/parse
     on_change = pyqtSignal()
 
@@ -66,27 +132,25 @@ class ValueWidget(QWidget, Generic[T]):
         * NOTE: you can also just wrap class function with InnerParser / InnerPrinter
     * fill: optional, set the widget's values based on a value
     """
-    MAKE_TITLE = None
-    MAKE_INDICATOR = None
-    MAKE_PLAINTEXT = None
+    MAKE_TITLE: bool = None
+    MAKE_INDICATOR: bool = None
+    MAKE_PLAINTEXT: bool = None
+
+    def __new__(cls, *args, **kwargs):
+        ret = super().__new__(cls, *args, **kwargs)
+        ret.__new_args = (args, kwargs)
+        return ret
 
     def __init__(self, title,
                  *args,
                  validation_func: Callable[[T], None] = None,
                  auto_func: Callable[[], T] = None,
-                 make_title=...,
-                 make_indicator=...,
-                 make_plaintext=...,
-                 make_auto=...,
+                 make_title: bool = None,
+                 make_indicator: bool = None,
+                 make_plaintext: bool = None,
+                 make_auto: bool = None,
                  help: str = None,
                  **kwargs):
-        def default_check(name, param, default):
-            if param is ...:
-                if default is None:
-                    raise Exception(f'{name} not provided')
-                return default
-            return param
-
         if kwargs.get('flags', ()) is None:
             kwargs['flags'] = Qt.WindowFlags()
 
@@ -95,15 +159,15 @@ class ValueWidget(QWidget, Generic[T]):
 
         try:
             super().__init__(*args, **kwargs)
-        except TypeError:
+        except (TypeError, AttributeError):
             print(f'args: {args}, kwargs: {kwargs}')
             raise
         self.title = title
         self.help = help
 
-        self.make_title = default_check('make_title', make_title, self.MAKE_TITLE)
-        self.make_indicator = default_check('make_indicator', make_indicator, self.MAKE_INDICATOR)
-        self.make_plaintext = default_check('make_plaintext', make_plaintext, self.MAKE_PLAINTEXT)
+        self.make_title = first_valid(make_title=make_title, MAKE_TITLE=self.MAKE_TITLE)
+        self.make_indicator = first_valid(make_indicator=make_indicator, MAKE_INDICATOR=self.MAKE_INDICATOR)
+        self.make_plaintext = first_valid(make_plaintext=make_plaintext, MAKE_PLAINTEXT=self.MAKE_PLAINTEXT)
 
         self.indicator_label: Optional[QLabel] = None
         self.auto_button: Optional[QPushButton] = None
@@ -246,6 +310,22 @@ class ValueWidget(QWidget, Generic[T]):
         self._invalidate_value()
         self._update_indicator()
         self.on_change.emit()
+
+    _template_class = ValueWidgetTemplate
+
+    @classmethod
+    @wraps(__init__)
+    def template(cls, *args, **kwargs):
+        return cls._template_class(cls, args, kwargs)
+
+    def template_of(self):
+        a, k = self.__new_args
+        return self.template(*a, **k)
+
+    @classmethod
+    def template_class(cls, class_):
+        cls._template_class = class_
+        return class_
 
     def __str__(self):
         return super().__str__() + ': ' + self.title
@@ -529,7 +609,10 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
                 self.print_combo.setVisible(False)
 
             for printer in printers:
-                self.print_combo.addItem(printer.__name__, printer)
+                name = printer.__name__
+                if getattr(printer, '__explicit__', False):
+                    name += '*'
+                self.print_combo.addItem(name, printer)
 
             self.print_combo.setCurrentIndex(combo_index)
 
@@ -559,7 +642,10 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
                 self.parse_combo.setVisible(False)
 
             for parser in parsers:
-                self.parse_combo.addItem(parser.__name__, parser)
+                name = parser.__name__
+                if getattr(parser, '__explicit__', False):
+                    name += '*'
+                self.parse_combo.addItem(name, parser)
             self.parse_combo.setCurrentIndex(combo_index)
 
         if not printers and not parsers:

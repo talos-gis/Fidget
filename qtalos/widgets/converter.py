@@ -5,40 +5,48 @@ from typing import TypeVar, Generic, Callable, Optional
 from functools import wraps
 from qtalos.backend import QHBoxLayout
 
-from qtalos import ValueWidget, ParseError, PlaintextParseError
-from qtalos.widgets.idiomatic_inner import get_idiomatic_inner_widgets
-from qtalos.widgets.__util__ import has_init, is_trivial_printer
+from qtalos import ValueWidget, ParseError, PlaintextParseError, ValueWidgetTemplate
+
+from qtalos.widgets.widget_wrappers import SingleWidgetWrapper
+from qtalos.widgets.__util__ import is_trivial_printer, only_valid
 
 T = TypeVar('T')
 F = TypeVar('F')
 
 
-class ConverterWidget(Generic[F, T], ValueWidget[T]):
-    def __init__(self, inner: ValueWidget[F] = None,
+# todo common superclass for this & optional
+class ConverterWidget(Generic[F, T], SingleWidgetWrapper[F, T]):
+    def __init__(self, inner_template: ValueWidgetTemplate[F] = None,
                  converter_func: Callable[[F], T] = None,
                  back_converter_func: Optional[Callable[[T], F]] = None,
                  **kwargs):
-        if (inner is None) == (self.make_inner is None):
-            if inner:
-                raise Exception('inner provided when make_inner is implemented')
-            raise Exception('inner not provided when make_inner is not implemented')
 
-        inner = inner or self.make_inner()
+        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
 
-        super().__init__(inner.title, make_plaintext=False, make_indicator=False, make_title=False,
-                         make_auto=False, **kwargs)
+        template_args = {}
 
-        self.inner = inner
+        for key in ('make_plaintext', 'make_indicator', 'make_title', 'make_auto'):
+            if key in kwargs:
+                template_args[key] = kwargs[key]
+            kwargs[key] = False
+        inner_template = inner_template.template(**template_args)
+
+        super().__init__(inner_template.title, **kwargs)
+
+        self.inner_template = inner_template
+        self.inner: ValueWidget[F] = None
         self.converter_func = converter_func
         self.back_converter_func = back_converter_func
 
         self.init_ui()
 
-    make_inner: Callable[[ConverterWidget[T]], ValueWidget[T]] = None
+    INNER_TEMPLATE: ValueWidgetTemplate[F] = None
 
     def init_ui(self):
         super().init_ui()
         layout = QHBoxLayout(self)
+
+        self.inner = self.inner_template()
         layout.addWidget(self.inner)
         self.setMinimumSize(self.inner.minimumSize())
         self.setMaximumSize(self.inner.maximumSize())
@@ -73,6 +81,11 @@ class ConverterWidget(Generic[F, T], ValueWidget[T]):
     def parse(self):
         f = self.inner.parse()
         return self.convert(f)
+
+    def validate(self, value: T):
+        if self.back_convert:
+            self.inner.validate(self.back_convert(value))
+        super().validate(value)
 
     def convert(self, v: F) -> T:
         if not self.converter_func:
@@ -121,34 +134,38 @@ class ConverterWidget(Generic[F, T], ValueWidget[T]):
     def fill(self):
         return (self.inner.fill and self.back_convert) and self._fill
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        idiomatic_inners = list(get_idiomatic_inner_widgets(cls))
-        if idiomatic_inners:
-            if has_init(cls):
-                raise Exception('cannot define idiomatic inner classes inside a class with an __init__')
+    def template_of(self):
+        ret = super().template_of()
+        template_args = {}
+        for key in ('make_plaintext', 'make_indicator', 'make_title', 'make_auto'):
+            if key in self.inner_template.kwargs:
+                template_args[key] = self.inner_template.kwargs[key]
+        return ret.template(**template_args)
 
-            if len(idiomatic_inners) != 1:
-                raise Exception('ConverterWidget can only have 1 idiomatic inner class')
 
-            inner_cls, = idiomatic_inners
-
-            @wraps(cls.__init__)
-            def __init__(self, *args, **kwargs):
-                return super(cls, self).__init__(inner_cls(*args, **kwargs))
-
-            cls.__init__ = __init__
+@ConverterWidget.template_class
+class ConverterWidgetTemplate(Generic[T], ValueWidgetTemplate[T]):
+    @property
+    def title(self):
+        if self.args:
+            inner = self.args[0]
+            try:
+                return inner.title
+            except AttributeError:
+                pass
+        return super().title
 
 
 if __name__ == '__main__':
     from qtalos.backend import QApplication
     from qtalos import wrap_parser
-    from qtalos.widgets import LineEdit
+    from qtalos.widgets import LineEdit, OptionalValueWidget
 
     app = QApplication([])
-    w = ConverterWidget(LineEdit('sample', pattern='(a[^a]*a|[^a])*', plaintext_button=True),
+    w = ConverterWidget(LineEdit('sample', pattern='(1[^1]*1|[^1])*', make_plaintext=True),
                         converter_func=wrap_parser(ValueError, int),
-                        back_converter_func=str)
+                        back_converter_func=str, make_indicator=True)
+    w = OptionalValueWidget(w, make_title=True)
     w.show()
     res = app.exec_()
     print(w.value())

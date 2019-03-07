@@ -64,6 +64,9 @@ def join_parsers(parsers: Callable[[], Iterable[PlaintextParser]]):
     def ret(s):
         first_error = None
         for p in parsers():
+            if getattr(p, '__explicit__', False):
+                continue
+
             try:
                 return p(s)
             except PlaintextParseError as e:
@@ -80,6 +83,9 @@ def join_printers(printers: Callable[[], Iterable[PlaintextPrinter]]):
     def ret(s):
         first_error = None
         for p in printers():
+            if getattr(p, '__explicit__', False):
+                continue
+
             try:
                 return p(s)
             except PlaintextPrintError as e:
@@ -104,6 +110,14 @@ class InnerPlaintextParser:
     def __call__(self, *args, **kwargs):
         return self.__func__(*args, **kwargs)
 
+    @property
+    def __explicit__(self):
+        return self.__func__.__explicit__
+
+    @__explicit__.setter
+    def __explicit__(self, v):
+        self.__func__.__explicit__ = v
+
     def __get__(self, instance, owner):
         return self.__func__.__get__(instance, owner)
 
@@ -116,9 +130,31 @@ class InnerPlaintextPrinter:
     def __call__(self, *args, **kwargs):
         return self.__func__(*args, **kwargs)
 
+    @property
+    def __explicit__(self):
+        return self.__func__.__explicit__
+
+    @__explicit__.setter
+    def __explicit__(self, v):
+        self.__func__.__explicit__ = v
+
     def __get__(self, instance, owner):
         return self.__func__.__get__(instance, owner)
 
 
-wrap_plaintext_parser = exc_wrap(PlaintextParseError(...))
-wrap_plaintext_printer = exc_wrap(PlaintextPrintError(...))
+wrap_plaintext_parser = exc_wrap(PlaintextParseError)
+wrap_plaintext_printer = exc_wrap(PlaintextPrintError)
+
+
+def format_printer(format_spec):
+    @wraps(str)
+    def ret(v):
+        return format(v, format_spec)
+
+    ret.__name__ = f'format({format_spec})'
+    return ret
+
+
+def explicit(func):
+    func.__explicit__ = True
+    return func

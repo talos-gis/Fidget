@@ -9,7 +9,7 @@ if __name__ == '__main__':
         IntEdit('raw text'),
         LabelValueWidget('auto', ('auto', 123456))
     ], make_plaintext=True, frame_style=QFrame.Box, selector_cls=StackedValueWidget.CheckBoxSelector,
-                           layout_cls=QHBoxLayout)
+                           layout_cls=QHBoxLayout, make_indicator=False)
     w.show()
     res = app.exec_()
     print(w.value())

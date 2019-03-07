@@ -10,4 +10,21 @@ from qtalos.widgets.line import LineEdit
 from qtalos.widgets.optional import OptionalValueWidget
 from qtalos.widgets.stacked import StackedValueWidget
 from qtalos.widgets.tuple import TupleWidget
-from qtalos.widgets.user_util import IntEdit, FloatEdit, ComplexEdit, simple_edit
+from qtalos.widgets.user_util import IntEdit, FloatEdit, ComplexEdit, SimpleEdit
+
+# todo pick a standard name and stick to it
+
+# todo multi-file widget
+# todo directory widget
+# todo multi-directory widget
+# todo cells widget
+# todo list widget?
+# todo geometry widget?
+# todo image widget
+# todo resource widget
+# todo color widget
+# todo script editor widget?
+# todo slider widget
+# todo rich text editor?
+
+# todo templates

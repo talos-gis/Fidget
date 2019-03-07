@@ -11,7 +11,6 @@ class ValueCombo(Generic[T], ValueWidget[T]):
     NO_DEFAULT_VALUE = object()
     MAKE_TITLE = MAKE_PLAINTEXT = MAKE_INDICATOR = False
 
-
     def __init__(self, title, options: Iterable[Union[Tuple[str, T], T]], default_index=-1,
                  default_value: T = NO_DEFAULT_VALUE, **kwargs):
         super().__init__(title, **kwargs)

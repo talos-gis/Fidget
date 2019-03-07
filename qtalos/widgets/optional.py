@@ -1,24 +1,30 @@
 from __future__ import annotations
 
-from typing import Optional, TypeVar, Generic, Callable
+from typing import Optional, TypeVar, Generic
 
 from itertools import chain
 from functools import wraps, partial
 
 from qtalos.backend import \
-    \
-    QCheckBox, QHBoxLayout, QWidget, QApplication,\
-    \
-    QObject, QEvent
+ \
+    QCheckBox, QHBoxLayout, QWidget, QApplication, \
+ \
+    QObject, QEvent, \
+ \
+    __backend__
 
-from qtalos import ValueWidget, PlaintextPrintError, none_parser
-from qtalos.widgets.idiomatic_inner import get_idiomatic_inner_widgets
-from qtalos.widgets.__util__ import has_init
+from qtalos import ValueWidget, PlaintextPrintError, none_parser, ValueWidgetTemplate
+
+from qtalos.widgets.widget_wrappers import SingleWidgetWrapper
+from qtalos.widgets.__util__ import only_valid
+
+if __backend__.__name__ == 'PySide2':
+    import shiboken2
 
 T = TypeVar('T')
 
 
-class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
+class OptionalValueWidget(Generic[T], SingleWidgetWrapper[T, Optional[T]]):
     class MouseWarden(QObject):
         def __init__(self, *args, target, dispatch, **kwargs):
             super().__init__(*args, **kwargs)
@@ -26,30 +32,31 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
             self.dispatch = dispatch
 
         def eventFilter(self, obj, event):
-            if obj.isWidgetType() and event.type() == QEvent.MouseButtonPress:
-                if self.target in obj.window().findChildren(QWidget) \
-                        and self.target.underMouse() and not self.target.isEnabled():
-                    self.dispatch()
+            if obj.isWidgetType() and event.type() == QEvent.MouseButtonPress \
+                    and self.target in obj.window().findChildren(QWidget) \
+                    and self.target.underMouse() and not self.target.isEnabled():
+                self.dispatch()
                 obj.setFocus()
+
+            if __backend__.__name__ == 'PySide2' and not shiboken2.isValid(obj):
+                return False
             return super().eventFilter(obj, event)
 
-    def __init__(self, inner: ValueWidget[T] = None, default_state=False, layout_cls=..., none_value=None, **kwargs):
-        if (inner is None) == (self.make_inner is None):
-            if inner:
-                raise Exception('inner provided when make_inner is implemented')
-            raise Exception('inner not provided when make_inner is not implemented')
+    def __init__(self, inner_template: ValueWidgetTemplate[T] = None, default_state=False, layout_cls=...,
+                 none_value=None,
+                 **kwargs):
 
-        inner = inner or self.make_inner()
+        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
 
-        kwargs.setdefault('make_plaintext', inner.make_plaintext)
-        kwargs.setdefault('make_indicator', inner.make_indicator)
-        kwargs.setdefault('make_title', inner.make_title)
+        inner_template.extract_default(sink=kwargs, upper_space=self)
 
-        super().__init__(inner.title, auto_func=inner.auto_func, **kwargs)
+        super().__init__(inner_template.title, **kwargs)
 
-        self.inner = inner
+        self.inner_template = inner_template
+
+        self.inner: ValueWidget[T] = None
         self.not_none_checkbox: QCheckBox = None
-        self.warden : OptionalValueWidget.MouseWarden = None
+        self.warden: OptionalValueWidget.MouseWarden = None
 
         self.none_value = none_value
 
@@ -57,7 +64,7 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
 
         self.not_none_checkbox.setChecked(default_state)
 
-    make_inner: Callable[[OptionalValueWidget[T]], ValueWidget[T]] = None
+    INNER_TEMPLATE: ValueWidgetTemplate[T] = None
     default_layout_cls = QHBoxLayout
 
     def init_ui(self, layout_cls=...):
@@ -67,19 +74,20 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
 
         layout = layout_cls(self)
 
-        for p in chain(self.inner.provided_pre(),
-                       self.inner.provided_post()):
-            p.hide()
-
         with self.setup_provided(layout):
             self.not_none_checkbox = QCheckBox()
             self.not_none_checkbox.toggled.connect(self._not_none_changed)
             layout.addWidget(self.not_none_checkbox)
 
+            self.inner = self.inner_template()
             self.inner.on_change.connect(self.change_value)
             self.inner.setEnabled(False)
 
             layout.addWidget(self.inner)
+
+        for p in chain(self.inner.provided_pre(),
+                       self.inner.provided_post()):
+            p.hide()
 
         self.warden = self.MouseWarden(target=self.inner, dispatch=partial(self.not_none_checkbox.setChecked, True))
         QApplication.instance().installEventFilter(self.warden)
@@ -129,30 +137,27 @@ class OptionalValueWidget(Generic[T], ValueWidget[Optional[T]]):
         self.inner.setEnabled(enable)
         self.change_value()
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        idiomatic_inners = list(get_idiomatic_inner_widgets(cls))
-        if idiomatic_inners:
-            if has_init(cls):
-                raise Exception('cannot define idiomatic inner classes inside a class with an __init__')
 
-            if len(idiomatic_inners) != 1:
-                raise Exception('OptionalValueWidget can only have 1 idiomatic inner class')
-
-            inner_cls, = idiomatic_inners
-
-            @wraps(cls.__init__)
-            def __init__(self, *args, **kwargs):
-                return super(cls, self).__init__(inner_cls(*args, **kwargs))
-
-            cls.__init__ = __init__
+@OptionalValueWidget.template_class
+class OptionalTemplate(Generic[T], ValueWidgetTemplate[T]):
+    @property
+    def title(self):
+        if self.args:
+            inner = self.args[0]
+            try:
+                return inner.title
+            except AttributeError:
+                pass
+        return super().title
 
 
 if __name__ == '__main__':
     from qtalos.widgets import *
 
     app = QApplication([])
-    w = OptionalValueWidget(IntEdit('source ovr', placeholder=False))
+    w = OptionalValueWidget(
+        IntEdit.template('source ovr', placeholder=False, make_title=True, make_indicator=True),
+    )
     w.show()
     res = app.exec_()
     print(w.value())

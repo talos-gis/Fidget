@@ -4,7 +4,7 @@ import re
 
 from qtalos.backend import QLineEdit, QHBoxLayout
 
-from qtalos import ValueWidget, InnerPlaintextParser, ValidationError, PlaintextParseError
+from qtalos import ValueWidget, InnerPlaintextParser, ValidationError
 
 
 class LineEdit(ValueWidget[str]):
@@ -51,8 +51,6 @@ class LineEdit(ValueWidget[str]):
 
     @InnerPlaintextParser
     def raw_text(self, v):
-        if self.pattern and not self.pattern.fullmatch(v):
-            raise PlaintextParseError('string does not match pattern')
         return v
 
     def fill(self, v: str):

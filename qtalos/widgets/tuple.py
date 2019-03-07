@@ -1,39 +1,46 @@
 from __future__ import annotations
 
-from typing import Callable, Iterable, Tuple
+from typing import Type, Iterable, Tuple, Union, TypeVar, Sequence, Any
 import json
-from functools import wraps
+from itertools import chain
 
-from qtalos.backend import QVBoxLayout, QFrame
+from qtalos.backend import QVBoxLayout, QFrame, QBoxLayout
 
 from qtalos import ValueWidget, ParseError, ValidationError, InnerPlaintextParser, InnerPlaintextPrinter, \
-    PlaintextPrintError, PlaintextParseError
-from qtalos.widgets.idiomatic_inner import get_idiomatic_inner_widgets
-from qtalos.widgets.__util__ import has_init
+    PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
+from qtalos.__util__ import first_valid
+
+from qtalos.widgets.widget_wrappers import MultiWidgetWrapper
+from qtalos.widgets.__util__ import only_valid
+
+T = TypeVar('T')
+Template = Union[
+    ValueWidgetTemplate[T],
+    ValueWidget[T]
+]
 
 
-class TupleWidget(ValueWidget[Tuple]):
-    def __init__(self, title, inner: Iterable[ValueWidget] = None, frame_style=None,
-                 layout_cls=..., **kwargs):
+class TupleWidget(MultiWidgetWrapper[Any, Tuple]):
+    def __init__(self, title, inner_templates: Iterable[Template] = None, frame_style=None,
+                 layout_cls: Type[QBoxLayout] = None, **kwargs):
+
+        self.inner_templates = tuple(
+            t.template_of() for t in only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES)
+        )
+        ValueWidgetTemplate.extract_default(*self.inner_templates, upper_space=self, sink=kwargs)
+
         super().__init__(title, **kwargs)
-        if (inner is None) == (self.make_inner is None):
-            if inner:
-                raise Exception('inner provided when make_inner is implemented')
-            raise Exception('inner not provided when make_inner is not implemented')
-
-        inner = inner or self.make_inner()
-        self.inner = tuple(inner)
+        self.inners: Sequence[ValueWidget] = None
 
         self.init_ui(frame_style=frame_style, layout_cls=layout_cls)
 
-    make_inner: Callable[[TupleWidget], Iterable[ValueWidget]] = None
-    default_layout_cls = QVBoxLayout
+    INNER_TEMPLATES: Iterable[Template] = None
+    LAYOUT_CLS: Type[QBoxLayout] = QVBoxLayout
 
-    def init_ui(self, frame_style=None, layout_cls=...):
+    def init_ui(self, frame_style=None, layout_cls: Type[QBoxLayout] = None):
         super().init_ui()
 
-        if layout_cls is ...:
-            layout_cls = self.default_layout_cls
+        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
 
         master_layout = layout_cls(self)
 
@@ -44,16 +51,22 @@ class TupleWidget(ValueWidget[Tuple]):
         layout = layout_cls()
 
         with self.setup_provided(master_layout, layout):
-            for option in self.inner:
-                option.on_change.connect(self.change_value)
-                layout.addWidget(option)
+            self.inners = []
+            for inner_template in self.inner_templates:
+                inner = inner_template()
+                for p in chain(inner.provided_pre(),
+                               inner.provided_post()):
+                    p.hide()
+                self.inners.append(inner)
+                inner.on_change.connect(self.change_value)
+                layout.addWidget(inner)
 
         frame.setLayout(layout)
         master_layout.addWidget(frame)
 
     def parse(self):
         d = []
-        for subwidget in self.inner:
+        for subwidget in self.inners:
             try:
                 value = subwidget.parse()
             except ParseError as e:
@@ -64,7 +77,7 @@ class TupleWidget(ValueWidget[Tuple]):
     def validate(self, d: Tuple):
         super().validate(d)
         for i, v in enumerate(d):
-            subwidget = self.inner[i]
+            subwidget = self.inners[i]
             try:
                 subwidget.validate(v)
             except ValidationError as e:
@@ -83,11 +96,11 @@ class TupleWidget(ValueWidget[Tuple]):
         ret = []
 
         for i, v in enumerate(d):
-            if i >= len(self.inner):
+            if i >= len(self.inners):
                 if exact:
-                    raise PlaintextParseError(f'too many values (expected {len(self.inner)})')
+                    raise PlaintextParseError(f'too many values (expected {len(self.inners)})')
                 continue
-            subwidget = self.inner[i]
+            subwidget = self.inners[i]
             if not isinstance(v, str):
                 raise PlaintextParseError(f'in index: {i}, value must be str, got {type(v).__name__}')
 
@@ -100,6 +113,7 @@ class TupleWidget(ValueWidget[Tuple]):
 
         return tuple(ret)
 
+    @explicit
     @InnerPlaintextParser
     def from_json_wildcard(self, v: str):
         return self.from_json(v, exact=False)
@@ -107,7 +121,7 @@ class TupleWidget(ValueWidget[Tuple]):
     @InnerPlaintextPrinter
     def to_json(self, d: Tuple):
         ret = []
-        for i, subwidget in enumerate(self.inner):
+        for i, subwidget in enumerate(self.inners):
             v = d[i]
             try:
                 s = subwidget.joined_plaintext_printer(v)
@@ -122,27 +136,14 @@ class TupleWidget(ValueWidget[Tuple]):
             yield from super().plaintext_parsers()
 
     def _fill(self, d: Tuple):
-        for sw, v in zip(self.inner, d):
+        for sw, v in zip(self.inners, d):
             sw.fill(v)
 
     @property
     def fill(self):
-        if not all(sw.fill for sw in self.inner):
+        if not all(sw.fill for sw in self.inners):
             return None
         return self._fill
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        idiomatic_inners = list(get_idiomatic_inner_widgets(cls))
-        if idiomatic_inners:
-            if has_init(cls):
-                raise Exception('cannot define idiomatic inner classes inside a class with an __init__')
-
-            @wraps(cls.__init__)
-            def __init__(self, *args, **kwargs):
-                return super(cls, self).__init__(*args, inners=idiomatic_inners, **kwargs)
-
-            cls.__init__ = __init__
 
 
 if __name__ == '__main__':
@@ -155,11 +156,12 @@ if __name__ == '__main__':
         MAKE_INDICATOR = True
         MAKE_TITLE = True
 
-        default_layout_cls = QHBoxLayout
+        LAYOUT_CLS = QHBoxLayout
 
-        def make_inner(self):
-            yield IntEdit('X', make_indicator=False)
-            yield IntEdit('Y', make_indicator=False)
+        INNER_TEMPLATES = [
+            IntEdit.template('X', make_indicator=False),
+            IntEdit.template('Y', make_indicator=False)
+        ]
 
 
     app = QApplication([])

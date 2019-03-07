@@ -1,8 +1,8 @@
 from qtalos.value_widget import ParseError, ValidationError
 from qtalos.__util__ import exc_wrap
 
-wrap_parser = exc_wrap(ParseError(...))
-wrap_validator = exc_wrap(ValidationError(...))
+wrap_parser = exc_wrap(ParseError)
+wrap_validator = exc_wrap(ValidationError)
 
 
 def validator(message=..., func=None):

@@ -1,6 +1,8 @@
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, Generic
 
-from qtalos import wrap_parser
+from functools import partial
+
+from qtalos import format_printer, regex_parser, PlaintextParseError, wrap_parser, ValueWidget
 
 from qtalos.widgets.line import LineEdit
 from qtalos.widgets.converter import ConverterWidget
@@ -8,43 +10,74 @@ from qtalos.widgets.converter import ConverterWidget
 T = TypeVar('T')
 
 
-def simple_edit(converter_func: Callable[[str], T], name=...):
-    class Ret(ConverterWidget[str, T]):
-        def __init__(self, title, **kwargs):
-            line_edit_args = {'make_indicator': False}
+class SimpleEdit(Generic[T], ConverterWidget[str, T]):
+    MAKE_PLAINTEXT = False
+    converter_func: Callable[[str], T]
 
-            for k in ('make_title', 'make_plaintext', 'make_auto', 'make_indicator',
-                      'pattern', 'convert', 'back_convert', 'placeholder'):
-                if k in kwargs:
-                    line_edit_args[k] = kwargs[k]
-                    del kwargs[k]
+    def __init__(self, title, **kwargs):
+        line_edit_args = {'make_indicator': False}
 
-            super().__init__(LineEdit(title, **line_edit_args), **kwargs)
+        for k in ('make_title', 'make_plaintext', 'make_auto', 'make_indicator',
+                  'pattern', 'convert', 'back_convert', 'placeholder'):
+            if k in kwargs:
+                line_edit_args[k] = kwargs[k]
+                del kwargs[k]
 
-        def convert(self, v: str):
-            return converter_func(v)
+        super().__init__(LineEdit(title, **line_edit_args), converter_func=type(self).converter_func, **kwargs)
 
-        def back_convert(self, v: T):
-            return str(v)
+    def back_convert(self, v: T):
+        return str(v)
 
-    if name is ...:
-        name = f'{converter_func.__name__.capitalize()}Edit'
+    _template_class = ValueWidget._template_class
 
-    Ret.__name__ = name
-    Ret.__qualname__ = simple_edit.__qualname__[:-len(simple_edit.__name__)]+name
-
-    return Ret
+    def template_of(self):
+        return ValueWidget.template_of(self)
 
 
-IntEdit = simple_edit(wrap_parser(ValueError, int))
-FloatEdit = simple_edit(wrap_parser(ValueError, float))
-ComplexEdit = simple_edit(wrap_parser(ValueError, complex))
+class IntEdit(SimpleEdit[int]):
+    converter_func = wrap_parser(ValueError, partial(int, base=0))
+
+    def plaintext_printers(self):
+        yield from super().plaintext_printers()
+        yield hex
+        yield bin
+        yield oct
+        yield format_printer('n')
+        yield format_printer('X')
+
+
+class FloatEdit(SimpleEdit[float]):
+    converter_func = wrap_parser(ValueError, float)
+
+    @staticmethod
+    @regex_parser(r'([0-9]*(\.[0-9]+)?)%')
+    def percentage(m):
+        try:
+            return float(m[0])
+        except ValueError as e:
+            raise PlaintextParseError(...) from e
+
+    def plaintext_printers(self):
+        yield from super().plaintext_printers()
+        yield format_printer('f')
+        yield format_printer('e')
+        yield format_printer('g')
+        yield format_printer('%')
+
+    def plaintext_parsers(self):
+        yield from super().plaintext_parsers()
+        yield self.percentage
+
+
+class ComplexEdit(SimpleEdit[complex]):
+    converter_func = wrap_parser(ValueError, complex)
+
 
 if __name__ == '__main__':
     from qtalos.backend import QApplication
 
     app = QApplication([])
-    w = ComplexEdit('sample', make_plaintext=True)
+    w = IntEdit('sample', make_plaintext=True, make_indicator=True)
     w.show()
     res = app.exec_()
     print(w.value())

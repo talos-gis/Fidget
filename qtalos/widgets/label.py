@@ -2,7 +2,7 @@ from typing import TypeVar, Generic, Tuple, Union
 
 from qtalos.backend import QLabel, QHBoxLayout
 
-from qtalos import ValueWidget, InnerPlaintextParser, PlaintextParseError
+from qtalos import ValueWidget, InnerPlaintextParser, PlaintextParseError, PlaintextPrintError
 
 T = TypeVar('T')
 
@@ -10,12 +10,14 @@ T = TypeVar('T')
 class LabelValueWidget(Generic[T], ValueWidget[T]):
     NO_DEFAULT_VALUE = object()
 
+    MAKE_INDICATOR = MAKE_TITLE = MAKE_PLAINTEXT = False
+
     def __init__(self, title, value: Union[Tuple[str, T], T], **kwargs):
         kwargs.setdefault('make_title', False)
         super().__init__(title, **kwargs)
 
         self.label: QLabel = None
-        self.single_value = self._name_and_value(value)
+        self.name, self.names, self.single_value = self._names_and_value(value)
 
         self.init_ui()
 
@@ -25,31 +27,52 @@ class LabelValueWidget(Generic[T], ValueWidget[T]):
         layout = QHBoxLayout(self)
 
         with self.setup_provided(layout):
-            self.label = QLabel(self.single_value[0])
+            self.label = QLabel(self.name)
             layout.addWidget(self.label)
 
     def parse(self):
-        return self.single_value[1]
+        return self.single_value
 
     def fill(self, key: Union[T, bool]):
-        if key != self.single_value[1]:
+        if key != self.single_value:
             raise ValueError('value is not a valid fill value')
 
-    @staticmethod
-    def _name_and_value(v):
+    def _names_and_value(self, value):
+        names = []
+        first_name = None
         try:
-            a, b = v
-            if not isinstance(a, str):
+            name, v = value
+            if not isinstance(name, str):
                 raise TypeError
         except (TypeError, ValueError):
-            return str(v), v
-        return v
+            pass
+        else:
+            value = v
+            names.append(name)
+            first_name = name
+
+        names.append(self.title)
+
+        for printer in self.plaintext_printers():
+            try:
+                name = printer(value)
+            except PlaintextPrintError:
+                continue
+            else:
+                names.append(name)
+                if not first_name:
+                    first_name = name
+
+        if not first_name:
+            first_name = self.title
+
+        return first_name, frozenset(names), value
 
     @InnerPlaintextParser
     def singleton(self, v):
-        if v != self.single_value[0]:
-            raise PlaintextParseError(f'can only parse {self.single_value[0]!r}')
-        return self.single_value[1]
+        if v not in self.names:
+            raise PlaintextParseError(f'can only parse {self.names}')
+        return self.single_value
 
 
 if __name__ == '__main__':
