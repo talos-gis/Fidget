@@ -12,17 +12,33 @@ PlaintextPrinter = Callable[[T], str]
 PlaintextParser = Callable[[str], T]
 
 
+# todo cursor position for parse errors?
+
+
 class PlaintextParseError(Exception):
+    """
+    An exception for when a parser failed to parse a plaintext
+    """
     pass
 
 
 class PlaintextPrintError(Exception):
+    """
+    An exception for when a parser failed to print an object
+    """
     pass
 
 
-def regex_parser(*patterns: Union[Pattern[str], str], name=...) \
+def regex_parser(*patterns: Union[Pattern[str], str]) \
         -> Callable[[Callable[[Match[str]], Any]], PlaintextParser]:
-    patterns = [re.compile(p) for p in patterns]
+    """
+    A wrapper for a function that accepts a regex match object. The function will accept only a plaintext that fully
+     matches one of the regular expression pattern, and forward that match to the function.
+    :param patterns: the patterns to match against.
+    """
+    patterns = [
+        (re.compile(p) if isinstance(p, str) else p) for p in patterns
+    ]
 
     def ret(func):
         @wraps(func)
@@ -33,15 +49,18 @@ def regex_parser(*patterns: Union[Pattern[str], str], name=...) \
                     return func(m)
             raise PlaintextParseError('string did not match pattern')
 
-        if name is not ...:
-            ret.__name__ = name
-
         return ret
 
     return ret
 
 
-def json_parser(acceptable_types=(str, dict, list, int, float)):
+def json_parser(acceptable_type: Union[Type, Tuple[Type, ...]] = object):
+    """
+    A wrapper for a function that accepts an object. The function will accept only a plaintext that parses as JSON, and
+     forwards that object to the function.
+    :param acceptable_type: The wrapper will only accept objects of this type(s)
+    """
+
     def ret(func):
         @wraps(func)
         def ret(s: str):
@@ -50,9 +69,9 @@ def json_parser(acceptable_types=(str, dict, list, int, float)):
             except json.JSONDecodeError as e:
                 raise PlaintextParseError(...) from e
             else:
-                if not isinstance(json_obj, acceptable_types):
+                if not isinstance(json_obj, acceptable_type):
                     raise PlaintextParseError(
-                        f'object is not of an acceptable type (expected {acceptable_types}, got {type(json_obj)})')
+                        f'object is not of an acceptable type (expected {acceptable_type}, got {type(json_obj)})')
                 return func(json_obj)
 
         return ret
@@ -61,6 +80,11 @@ def json_parser(acceptable_types=(str, dict, list, int, float)):
 
 
 def join_parsers(parsers: Callable[[], Iterable[PlaintextParser]]):
+    """
+    joins parsers together, returning the first value that is processed without errors. skips explicit parsers.
+    :param parsers: a callable to generate parsers.
+    """
+
     def ret(s):
         first_error = None
         for p in parsers():
@@ -80,6 +104,11 @@ def join_parsers(parsers: Callable[[], Iterable[PlaintextParser]]):
 
 
 def join_printers(printers: Callable[[], Iterable[PlaintextPrinter]]):
+    """
+    joins printers together, returning the first value that is processed without errors. skips explicit printers.
+    :param printers: a callable to generate parsers.
+    """
+
     def ret(s):
         first_error = None
         for p in printers():
@@ -96,57 +125,34 @@ def join_printers(printers: Callable[[], Iterable[PlaintextPrinter]]):
     return ret
 
 
-def none_parser(s: str):
-    if s.lower() == 'none':
-        return None
-    raise PlaintextParseError('this parser only accepts "None"')
+def inner_plaintext_parser(func):
+    """
+    mark a method as plaintext parser
+    """
+    func.__plaintext_parser__ = True
+    return func
 
 
-class InnerPlaintextParser:
-    def __init__(self, func):
-        self.__func__ = func
-        update_wrapper(self, func)
-
-    def __call__(self, *args, **kwargs):
-        return self.__func__(*args, **kwargs)
-
-    @property
-    def __explicit__(self):
-        return self.__func__.__explicit__
-
-    @__explicit__.setter
-    def __explicit__(self, v):
-        self.__func__.__explicit__ = v
-
-    def __get__(self, instance, owner):
-        return self.__func__.__get__(instance, owner)
-
-
-class InnerPlaintextPrinter:
-    def __init__(self, func):
-        self.__func__ = func
-        update_wrapper(self, func)
-
-    def __call__(self, *args, **kwargs):
-        return self.__func__(*args, **kwargs)
-
-    @property
-    def __explicit__(self):
-        return self.__func__.__explicit__
-
-    @__explicit__.setter
-    def __explicit__(self, v):
-        self.__func__.__explicit__ = v
-
-    def __get__(self, instance, owner):
-        return self.__func__.__get__(instance, owner)
+def inner_plaintext_printer(func):
+    """
+    mark a method as plaintext printer
+    """
+    func.__plaintext_printer__ = True
+    return func
 
 
 wrap_plaintext_parser = exc_wrap(PlaintextParseError)
+
 wrap_plaintext_printer = exc_wrap(PlaintextPrintError)
 
 
 def format_printer(format_spec):
+    """
+    A printer that prints with specific format spec
+    :param format_spec: the format specifications to print under.
+    :return: a plaintext printer
+    """
+
     @wraps(str)
     def ret(v):
         return format(v, format_spec)
@@ -156,5 +162,9 @@ def format_printer(format_spec):
 
 
 def explicit(func):
+    """
+    mark a function as explicit, and return it
+    """
+
     func.__explicit__ = True
     return func

@@ -2,17 +2,27 @@ from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List
 
 from qtalos.backend.QtWidgets import QComboBox, QHBoxLayout
 
-from qtalos.core import ValueWidget, PlaintextPrintError, InnerPlaintextParser, PlaintextParseError, ParseError
+from qtalos.core import ValueWidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
 
 T = TypeVar('T')
 
 
 class ValueCombo(Generic[T], ValueWidget[T]):
+    """
+    A ComboBox with values for each option
+    """
     NO_DEFAULT_VALUE = object()
     MAKE_TITLE = MAKE_PLAINTEXT = MAKE_INDICATOR = False
 
     def __init__(self, title, options: Iterable[Union[Tuple[str, T], T]], default_index=-1,
                  default_value: T = NO_DEFAULT_VALUE, **kwargs):
+        """
+        :param title: the title
+        :param options: an iterable of options: either bare values or str-value tuples
+        :param default_index: the default index of the ComboBox, ignored if a valid DefaultValue is provided
+        :param default_value: the default value of the widget
+        :param kwargs: forwarded to ValueWidget
+        """
         super().__init__(title, **kwargs)
         self.default_index = default_index
         self.default_value = default_value
@@ -92,7 +102,7 @@ class ValueCombo(Generic[T], ValueWidget[T]):
 
         self.combo_box.setCurrentIndex(index)
 
-    @InnerPlaintextParser
+    @inner_plaintext_parser
     def by_name(self, name):
         try:
             _, ret = self._opt_lookup_name[name]

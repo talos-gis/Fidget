@@ -24,9 +24,13 @@ class ConverterWidget(Generic[F, T], SingleWidgetWrapper[F, T]):
 
         template_args = {}
 
-        for key in ('make_plaintext', 'make_indicator', 'make_title', 'make_auto'):
+        for key in ('make_plaintext', 'make_indicator', 'make_title'):
             if key in kwargs:
                 template_args[key] = kwargs[key]
+            else:
+                v = getattr(self, key.upper(), None)
+                if v is not None:
+                    template_args[key] = v
             kwargs[key] = False
         inner_template = inner_template.template(**template_args)
 
@@ -136,7 +140,7 @@ class ConverterWidget(Generic[F, T], SingleWidgetWrapper[F, T]):
     def template_of(self):
         ret = super().template_of()
         template_args = {}
-        for key in ('make_plaintext', 'make_indicator', 'make_title', 'make_auto'):
+        for key in ('make_plaintext', 'make_indicator', 'make_title'):
             if key in self.inner_template.kwargs:
                 template_args[key] = self.inner_template.kwargs[key]
         return ret.template(**template_args)

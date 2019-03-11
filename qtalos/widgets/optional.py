@@ -8,7 +8,7 @@ from functools import wraps, partial
 from qtalos.backend.QtWidgets import QCheckBox, QHBoxLayout, QWidget, QApplication
 from qtalos.backend.QtCore import QObject, QEvent, __backend__
 
-from qtalos.core import ValueWidget, PlaintextPrintError, none_parser, ValueWidgetTemplate
+from qtalos.core import ValueWidget, PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate
 from qtalos.core.__util__ import first_valid
 
 from qtalos.widgets.widget_wrappers import SingleWidgetWrapper
@@ -21,8 +21,16 @@ T = TypeVar('T')
 C = TypeVar('C')
 
 
-# todo optional is only valid if none_value is None
 class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
+    singleton_names = {
+        None: frozenset(['none']),
+        NotImplemented: frozenset(['notimplemented', 'not implemented']),
+        ...: frozenset(['...', 'ellipsis']),
+        (): frozenset(['()']),
+        0: frozenset(['0']),
+        '': frozenset(['""', "''"])
+    }
+
     class MouseWarden(QObject):
         def __init__(self, *args, target, dispatch, **kwargs):
             super().__init__(*args, **kwargs)
@@ -57,6 +65,15 @@ class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
         self.warden: OptionalValueWidget.MouseWarden = None
 
         self.none_value = none_value
+        none_names = self.singleton_names.get(self.none_value)
+        if none_names:
+            def NoneParser(s: str):
+                if s.lower() in none_names:
+                    return None
+                raise PlaintextParseError(f'this parser only accepts {next(iter(none_names))}')
+            self.none_parser = NoneParser
+        else:
+            self.none_parser = None
 
         self.init_ui(layout_cls)
 
@@ -116,7 +133,8 @@ class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
     def plaintext_parsers(self):
         yield from super().plaintext_parsers()
         yield from self.inner.plaintext_parsers()
-        yield none_parser
+        if self.none_parser:
+            yield self.none_parser
 
     def _fill(self, v):
         if v is self.none_value:

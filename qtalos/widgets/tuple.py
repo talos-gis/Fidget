@@ -6,7 +6,7 @@ from itertools import chain
 
 from qtalos.backend.QtWidgets import QVBoxLayout, QFrame, QBoxLayout
 
-from qtalos.core import ValueWidget, ParseError, ValidationError, InnerPlaintextParser, InnerPlaintextPrinter, \
+from qtalos.core import ValueWidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
     PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
 from qtalos.core.__util__ import first_valid
 
@@ -83,8 +83,8 @@ class TupleWidget(MultiWidgetWrapper[Any, Tuple]):
             except ValidationError as e:
                 raise ValidationError('error validating ' + subwidget.title) from e
 
-    @InnerPlaintextParser
-    def from_json(self, v: str, exact=True):
+    @inner_plaintext_parser
+    def from_json(self, v: str, exact_len=True):
         try:
             d = json.loads(v)
         except json.JSONDecodeError as e:
@@ -92,33 +92,30 @@ class TupleWidget(MultiWidgetWrapper[Any, Tuple]):
 
         if not isinstance(d, list):
             raise PlaintextParseError(f'json is a {type(d).__name__} instead of list')
+        if exact_len and len(d) != len(self.inners):
+            raise PlaintextParseError(f'value number mismatch (expected {len(self.inners)}, got {len(d)})')
 
         ret = []
 
-        for i, v in enumerate(d):
-            if i >= len(self.inners):
-                if exact:
-                    raise PlaintextParseError(f'too many values (expected {len(self.inners)})')
-                continue
-            subwidget = self.inners[i]
+        for s, v in zip(self.inners, d):
             if not isinstance(v, str):
-                raise PlaintextParseError(f'in index: {i}, value must be str, got {type(v).__name__}')
+                raise PlaintextParseError(f'in {s.title}:, value must be str, got {type(v).__name__}')
 
             try:
-                parsed = subwidget.joined_plaintext_parser(v)
+                parsed = s.joined_plaintext_parser(v)
             except PlaintextParseError as e:
-                raise PlaintextParseError(f'error parsing {subwidget.title}') from e
+                raise PlaintextParseError(f'error parsing {s.title}') from e
 
             ret.append(parsed)
 
         return tuple(ret)
 
     @explicit
-    @InnerPlaintextParser
-    def from_json_wildcard(self, v: str):
-        return self.from_json(v, exact=False)
+    @inner_plaintext_parser
+    def from_json_inexact(self, v: str):
+        return self.from_json(v, exact_len=False)
 
-    @InnerPlaintextPrinter
+    @inner_plaintext_printer
     def to_json(self, d: Tuple):
         ret = []
         for i, subwidget in enumerate(self.inners):

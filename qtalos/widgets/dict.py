@@ -5,7 +5,7 @@ import json
 
 from qtalos.backend.QtWidgets import QVBoxLayout, QFrame, QScrollArea, QWidget, QBoxLayout
 
-from qtalos.core import ValueWidget, ParseError, ValidationError, InnerPlaintextParser, InnerPlaintextPrinter, \
+from qtalos.core import ValueWidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
     PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
 from qtalos.core.__util__ import first_valid
 
@@ -113,7 +113,7 @@ class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
             except ValidationError as e:
                 raise ValidationError('error validating ' + subwidget.title) from e
 
-    @InnerPlaintextParser
+    @inner_plaintext_parser
     def from_json(self, v: str, exact=True):
         try:
             d = json.loads(v)
@@ -144,11 +144,11 @@ class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
         return ret
 
     @explicit
-    @InnerPlaintextParser
+    @inner_plaintext_parser
     def from_json_wildcard(self, v: str):
         return self.from_json(v, exact=False)
 
-    @InnerPlaintextPrinter
+    @inner_plaintext_printer
     def to_json(self, d: Mapping[str, object]):
         ret = {}
         for k, subwidget in self.inners.items():

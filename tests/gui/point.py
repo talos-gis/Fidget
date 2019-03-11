@@ -1,12 +1,10 @@
 from typing import Tuple, Match
 
-from qtalos.backend import QLineEdit, QHBoxLayout
+from qtalos.backend.QtWidgets import QLineEdit, QHBoxLayout
 
-from qtalos import ValueWidget, regex_parser, json_parser, PlaintextParseError, ParseError, wrap_plaintext_parser
+from qtalos.core import ValueWidget, regex_parser, json_parser, PlaintextParseError, ParseError, wrap_plaintext_parser
 
 from tests.gui.__util__ import test_as_main
-
-point_pat = r'(?P<x>[0-9\.]+)\s*[,\s:\-|]\s*(?P<y>[0-9\.]+)'
 
 
 def parse_point(x, y):
@@ -23,10 +21,10 @@ def parse_point(x, y):
     return x, y
 
 
-@regex_parser(point_pat,
-              r'\(' + point_pat + r'\)',
-              r'\[' + point_pat + r'\]',
-              r'\{' + point_pat + r'\}')
+@regex_parser(r'(?P<x>[0-9\.]+)\s*[,\s:\-|]\s*(?P<y>[0-9\.]+)',
+              r'\((?P<x>[0-9\.]+)\s*[,\s:\-|]\s*(?P<y>[0-9\.]+)\)',
+              r'\[(?P<x>[0-9\.]+)\s*[,\s:\-|]\s*(?P<y>[0-9\.]+)\]',
+              r'\{(?P<x>[0-9\.]+)\s*[,\s:\-|]\s*(?P<y>[0-9\.]+)\}')
 def tuple_(m: Match[str]):
     x = m['x']
     y = m['y']

@@ -5,7 +5,7 @@ def test_as_main(*args, **kwargs):
     def ret(func):
         calling_mod = inspect.getmodule(inspect.stack()[1][0])
         if calling_mod.__name__ == '__main__':
-            from qtalos.backend import QApplication
+            from qtalos.backend.QtWidgets import QApplication
 
             app = QApplication([])
             w = func(*args, **kwargs)

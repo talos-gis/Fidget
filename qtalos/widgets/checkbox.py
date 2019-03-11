@@ -2,19 +2,28 @@ from typing import TypeVar, Generic, Tuple, Union, Mapping
 
 from qtalos.backend.QtWidgets import QCheckBox, QHBoxLayout
 
-from qtalos.core import ValueWidget, InnerPlaintextParser, PlaintextPrintError, PlaintextParseError
+from qtalos.core import ValueWidget, inner_plaintext_parser, PlaintextPrintError, PlaintextParseError
 
 T = TypeVar('T')
 
 
 class ValueCheckBox(Generic[T], ValueWidget[T]):
-    NO_DEFAULT_VALUE = object()
+    """
+    A checkbox that can contain one of two values
+    """
     MAKE_INDICATOR = False
     MAKE_TITLE = False
     MAKE_PLAINTEXT = False
+    TITLE_AS_TEXT = True
 
     def __init__(self, title, value_selector: Union[Tuple[T, T], Mapping[bool, T]] = (False, True),
                  initial: bool = False, **kwargs):
+        """
+        :param title: the title
+        :param value_selector: a mapping from bool to the desired value
+        :param initial: the initial boolean value
+        :param kwargs: forwarded to ValueWidget
+        """
         super().__init__(title, **kwargs)
 
         self.value_selector = value_selector
@@ -56,7 +65,7 @@ class ValueCheckBox(Generic[T], ValueWidget[T]):
 
         self.checkbox.setChecked(v)
 
-    @InnerPlaintextParser
+    @inner_plaintext_parser
     def from_values(self, text):
         for printer in self.plaintext_printers():
             try:
@@ -78,7 +87,7 @@ class ValueCheckBox(Generic[T], ValueWidget[T]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend import QApplication
+    from qtalos.backend.QtWidgets import QApplication
     from enum import Enum, auto
 
 

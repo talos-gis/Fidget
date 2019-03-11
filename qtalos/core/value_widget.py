@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Generic, TypeVar, Optional, Callable, Tuple, Union, Iterable, Type, Dict, Any
+from typing import Generic, TypeVar, Optional, Callable, Tuple, Iterable, Type, Dict, Any
 
 from abc import abstractmethod
-from enum import IntEnum
 from contextlib import contextmanager
 from pathlib import Path
 from functools import partial, wraps
@@ -13,33 +12,37 @@ from qtalos.backend.QtWidgets import QWidget, QPlainTextEdit, QPushButton, QComb
     QMessageBox, QFileDialog, QGroupBox, QGridLayout
 from qtalos.backend.QtCore import Qt, pyqtSignal, __backend__
 
-from qtalos.core.plaintext_adapter import PlaintextPrinter, PlaintextParser, PlaintextParseError, PlaintextPrintError, \
-    join_parsers, join_printers, InnerPlaintextParser, InnerPlaintextPrinter
+from qtalos.core.plaintext_adapter import PlaintextParseError, PlaintextPrintError, \
+    join_parsers, join_printers, PlaintextParser, PlaintextPrinter
+from qtalos.core.parsed_value import ParsedValue, ParseError, ValidationError
 from qtalos.core.__util__ import error_details, error_tooltip, first_valid
 
 T = TypeVar('T')
 
 
-# todo fix the init_ui mess
 # todo document this bullcrap
-
-class ValueState(IntEnum):
-    ok = 1
-    invalid = -1
-    unparsable = -2
-
-    def is_ok(self):
-        return self > 0
 
 
 class ValueWidgetTemplate(Generic[T]):
+    """
+    A template for a ValueWidget
+    """
+
     def __init__(self, widget_cls: Type[ValueWidget[T]], args: Tuple, kwargs: Dict[str, Any]):
+        """
+        :param widget_cls: the class of the ValueWidget
+        :param args: the positional arguments of the template
+        :param kwargs: the keyword arguments of the template
+        """
         self.widget_cls = widget_cls
         self.args = args
         self.kwargs = kwargs
 
     @property
-    def title(self):
+    def title(self) -> Optional[str]:
+        """
+        The title of the template, or None if one has not been provided
+        """
         if self.args:
             ret = self.args[0]
             if not isinstance(ret, str):
@@ -52,20 +55,38 @@ class ValueWidgetTemplate(Generic[T]):
         return partial(self.widget_cls, *self.args, **self.kwargs)
 
     def __call__(self, *args, **kwargs) -> ValueWidget[T]:
+        """
+        Create a widget form the template. args and kwargs are forwarded to the class constructor.
+        """
         return self._partial()(*args, **kwargs)
 
     def template(self, *args, **kwargs):
+        """
+        Create a further template from additional parameters
+        """
         args = self.args + args
         kwargs = {**self.kwargs, **kwargs}
         return type(self)(self.widget_cls, args, kwargs)
 
     def template_of(self):
+        """
+        return a template representing this template
+        """
         return self
-
-    NO_VALUE = object()
 
     def extract_default(*templates: ValueWidgetTemplate, sink: dict, upper_space, keys: Iterable[str] = ...,
                         union=True):
+        """
+        inject the default values from a template or collection of templates as defaults for keyword arguments.
+
+        :param templates: A tuple of templates to extract from
+        :param sink: the dict to set defaults for
+        :param upper_space: a namespace, if a key exists in uppercase in that namespace as not None, the key is not
+            filled into sink.
+        :param keys: a list of keys to extract
+        :param union: whether to perform a union or intersect in case of multiple, conflicting default values
+        """
+
         def combine_key(k):
             ret = None
             for t in templates:
@@ -98,7 +119,10 @@ class ValueWidgetTemplate(Generic[T]):
 
 
 class ValueWidget(QWidget, Generic[T]):
-    # todo fast/slow validation/parse
+    """
+    A QWidget that can contain a value, parsed form its children widgets.
+    """
+    # todo fast/slow validation/parse? does confirmed already handle this?
     on_change = pyqtSignal()
 
     # region inherit_me
@@ -143,9 +167,21 @@ class ValueWidget(QWidget, Generic[T]):
                  make_title: bool = None,
                  make_indicator: bool = None,
                  make_plaintext: bool = None,
-                 make_auto: bool = None,
                  help: str = None,
                  **kwargs):
+        """
+        :param title: the title of the ValueWidget
+        :param args: additional arguments forwarded to QWidget
+        :param validation_func: a validation callable, that will raise ValidationError if the parsed value is invalid
+        :param auto_func: a function that returns an automatic value, to fill in the UI
+        :param make_title: whether to create a title widget
+        :param make_indicator: whether to make an indicator widget
+        :param make_plaintext: whether to make a plaintext_edit widget
+        :param help: a help string to describe the widget
+        :param kwargs: additional arguments forwarded to QWidget
+
+        :inheritors: don't set default values for these parameters, change the uppercase class variables instead.
+        """
         if kwargs.get('flags', ()) is None:
             kwargs['flags'] = Qt.WindowFlags()
 
@@ -176,23 +212,24 @@ class ValueWidget(QWidget, Generic[T]):
 
         self._suppress_update = False
 
-        self._value: \
-            Tuple[Union[ValueState, None], Union[ParseError, ValidationError, T], str] = (None, None, None)
+        self._value: ParsedValue[T] = None
         self._joined_plaintext_printer = None
         self._joined_plaintext_parser = None
 
-        if make_auto is ...:
-            if self.auto_func:
-                if self.fill is None:
-                    raise Exception('auto_func can only be used on a ValueWidget with an implemented fill method')
-                else:
-                    self.make_auto = True
+        if self.auto_func:
+            if self.fill is None:
+                raise Exception('auto_func can only be used on a ValueWidget with an implemented fill method')
             else:
-                self.make_auto = False
+                self.make_auto = True
         else:
-            self.make_auto = make_auto
+            self.make_auto = False
 
     def init_ui(self):
+        """
+        initialise the internal widgets of the valuewidget
+        :inheritors: If you intend your class to be subclassed, don't add any widgets to self.
+        """
+        # todo split init_ui into two functions: one to build, one to construct
         self.setWindowTitle(self.title)
 
         if self.make_indicator:
@@ -207,42 +244,55 @@ class ValueWidget(QWidget, Generic[T]):
             self.plaintext_button = QPushButton('text')
             self.plaintext_button.clicked.connect(self._plaintext_btn_click)
 
-            self._plaintext_widget = PlaintextEditWidget()
+            self._plaintext_widget = PlaintextEditWidget(parent=self, flags=Qt.Dialog)
 
         if self.make_title:
             self.title_label = QLabel(self.title)
             if self.help:
                 self.title_label.mousePressEvent = self._help_clicked
 
+    # implement this method to allow the widget to be filled from outer elements (like plaintext or auto)
     fill: Optional[Callable[[ValueWidget[T], T], None]] = None
 
     @abstractmethod
     def parse(self) -> T:
+        """
+        Parse the internal UI and returned a parsed value. Or raise ParseException.
+        :return: the parsed value
+        """
         pass
 
     def validate(self, value: T) -> None:
+        """
+        Raise a ValidationError if the value is invalid
+        :param value: the parsed value
+        :inheritors: always call super().validate
+        """
         if self.validation_func:
             self.validation_func(value)
 
-    def inner_plaintext_parsers(self):
-        yield from (ip.__get__(self, type(self)) for ip in self._inner_parsers)
-
-    def inner_plaintext_printers(self):
-        yield from (ip.__get__(self, type(self)) for ip in self._inner_printers)
-
     def plaintext_printers(self) -> Iterable[PlaintextPrinter[T]]:
-        yield from self.inner_plaintext_printers()
+        """
+        :return: an iterator of plaintext printers for the widget
+        """
+        yield from self._inner_plaintext_printers()
         yield str
         yield repr
 
     def plaintext_parsers(self) -> Iterable[PlaintextParser[T]]:
-        yield from self.inner_plaintext_parsers()
+        """
+        :return: an iterator of plaintext parsers for the widget
+        """
+        yield from self._inner_plaintext_parsers()
 
     # endregion
 
     # region call_me
     @contextmanager
     def suppress_update(self, new_value=True, call_on_exit=True):
+        """
+        A context manager, while called, will suppress updates to the indicator. will update the indicator when exited.
+        """
         prev_value = self._suppress_update
         self._suppress_update = new_value
         yield new_value
@@ -252,23 +302,37 @@ class ValueWidget(QWidget, Generic[T]):
 
     @property
     def joined_plaintext_parser(self):
+        """
+        :return: A joining of the widget's plaintext parsers
+        """
         if not self._joined_plaintext_parser:
             self._joined_plaintext_parser = join_parsers(self.plaintext_parsers)
         return self._joined_plaintext_parser
 
     @property
     def joined_plaintext_printer(self):
+        """
+        :return: A joining of the widget's plaintext printers
+        """
         if not self._joined_plaintext_printer:
             self._joined_plaintext_printer = join_printers(self.plaintext_printers)
         return self._joined_plaintext_printer
 
     def provided_pre(self, exclude=()):
+        """
+        Get an iterator of the widget's provided widgets that are to appear before the main UI.
+        :param exclude: whatever widgets to exclude
+        """
         return (yield from (
             y for y in (self.title_label,)
             if y and y not in exclude
         ))
 
     def provided_post(self, exclude=()):
+        """
+        Get an iterator of the widget's provided widgets that are to appear after the main UI.
+        :param exclude: whatever widgets to exclude
+        """
         return (yield from (
             y for y in (self.indicator_label,
                         self.auto_button,
@@ -278,6 +342,12 @@ class ValueWidget(QWidget, Generic[T]):
 
     @contextmanager
     def setup_provided(self, pre_layout: QVBoxLayout, post_layout=..., exclude=()):
+        """
+        a context manager that will add the pre_provided widgets before the block and the post_provided after it.
+        :param pre_layout: a layout to add the pre_provided to
+        :param post_layout: a layout to add teh post_provided to, default is to use pre_layout
+        :param exclude: which provided widgets to exclude
+        """
         for p in self.provided_pre(exclude=exclude):
             pre_layout.addWidget(p)
         yield
@@ -292,57 +362,74 @@ class ValueWidget(QWidget, Generic[T]):
 
     # region call_me_from_outside
     def fill_from_text(self, s: str):
+        """
+        fill the UI from a string, by parsing it
+        :param s: the string to parse
+        """
         if not self.fill:
             raise Exception(f'widget {self} does not have its fill function implemented')
-        self.fill(self.joined_plaintext_parser(s))
+        return self.fill(self.joined_plaintext_parser(s))
 
-    def value(self) -> Tuple[ValueState, Union[ParseError, ValidationError, T], str]:
-        if self._value[0] is None:
+    def value(self) -> ParsedValue[T]:
+        """
+        :return: the current value of the widget
+        """
+        if self._value is None:
             self._reload_value()
         return self._value
 
     def change_value(self, *args):
+        """
+        a slot to refresh the value of the widget
+        """
         self._invalidate_value()
         self._update_indicator()
         self.on_change.emit()
 
-    _template_class = ValueWidgetTemplate
+    _template_class: Type[ValueWidgetTemplate[T]] = ValueWidgetTemplate
 
     @classmethod
     @wraps(__init__)
-    def template(cls, *args, **kwargs):
+    def template(cls, *args, **kwargs) -> ValueWidgetTemplate[T]:
+        """
+        get a template of the type
+        :param args: arguments for the template
+        :param kwargs: keyword arguments for the template
+        :return: the template
+        """
         return cls._template_class(cls, args, kwargs)
 
-    def template_of(self):
+    def template_of(self) -> ValueWidgetTemplate[T]:
+        """
+        get a template to recreate the widget
+        """
         a, k = self.__new_args
-        return self.template(*a, **k)
+        ret = self.template(*a, **k)
+        return ret
 
     @classmethod
     def template_class(cls, class_):
+        """
+        Assign a class to be this widget class's template class
+        """
         cls._template_class = class_
         return class_
 
     def __str__(self):
         return super().__str__() + ': ' + self.title
 
-    @classmethod
-    def show_as_main(cls, *args, **kwargs):
-        import sys
-        from qtalos.backend import QApplication
-
-        app = QApplication(sys.argv)
-        w = cls(*args, **kwargs)
-        w.show()
-        res = app.exec_()
-        if res:
-            exit(res)
-        return w.value()
     # endregion
 
     def _invalidate_value(self):
-        self._value = None, None, None
+        """
+        Mark the cached value is invalid, forcing it to be re-processed when needed next
+        """
+        self._value = None
 
     def _auto_btn_click(self, click_args):
+        """
+        autofill the widget
+        """
         try:
             value = self.auto_func()
         except DoNotFill as e:
@@ -354,40 +441,45 @@ class ValueWidget(QWidget, Generic[T]):
             self.fill(value)
 
     def _plaintext_btn_click(self):
-        self._plaintext_widget.prep_for_show(self)
+        """
+        open the plaintext dialog
+        """
+        self._plaintext_widget.prep_for_show()
         self._plaintext_widget.show()
 
-    def _update_indicator(self, *args, **kwargs):
+    def _update_indicator(self, *args):
+        """
+        update whatever indicators need updating when the value is changed
+        """
         if self._suppress_update:
             return
 
-        state, val, details = self._value = self.value()
+        parsed = self.value()
 
         if self.indicator_label and self.indicator_label.parent():
-            if state.is_ok():
+            if parsed.is_ok():
                 text = 'OK'
-                tooltip = str(val)
+                tooltip = str(parsed.value)
             else:
                 text = 'ERR'
-                tooltip = error_tooltip(val)
+                tooltip = error_tooltip(parsed.value)
 
             self.indicator_label.setText(text)
             self.indicator_label.setToolTip(tooltip)
 
         if self.plaintext_button and self.plaintext_button.parent():
-            self.plaintext_button.setEnabled(state == ValueState.ok or any(self.plaintext_parsers()))
+            self.plaintext_button.setEnabled(parsed.is_ok() or any(self.plaintext_parsers()))
 
     def _reload_value(self):
+        """
+        reload the cached value
+        """
+        assert self._value is None, '_reload called when a value is cached'
         try:
             value = self.parse()
-        except ParseError as e:
-            self._value = ValueState.unparsable, e, error_details(e)
-            return
-
-        try:
             self.validate(value)
-        except ValidationError as e:
-            self._value = ValueState.invalid, e, error_details(e)
+        except (ValidationError, ParseError) as e:
+            self._value = ParsedValue.from_error(e)
             return
 
         try:
@@ -395,49 +487,78 @@ class ValueWidget(QWidget, Generic[T]):
         except PlaintextPrintError as e:
             details = 'details could not be loaded because of a parser error:\n' + error_details(e)
 
-        self._value = ValueState.ok, value, details
+        self._value = ParsedValue.from_value(value, details)
 
     def _detail_button_clicked(self, event):
-        if self._value[-1]:
-            QMessageBox.information(self, 'validation details', self._value[-1])
+        """
+        show details of the value
+        """
+        if self._value.details:
+            QMessageBox.information(self, 'validation details', self._value.details)
 
     def _help_clicked(self, event):
+        """
+        show help message
+        """
         if self.help:
             QMessageBox.information(self, self.title, self.help)
 
-    _inner_printers: Iterable[PlaintextPrinter[T]] = ()
-    _inner_parsers: Iterable[PlaintextParser[T]] = ()
+    @staticmethod
+    def _inner_plaintext_parsers():
+        """
+        get the inner plaintext parsers
+        """
+        yield from ()
+
+    @staticmethod
+    def _inner_plaintext_printers():
+        """
+        get the inner plaintext printers
+        """
+        yield from ()
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         cls.on_change = pyqtSignal()
 
-        cls._inner_printers = []
-        cls._inner_parsers = []
+        inner_printers = []
+        inner_parsers = []
         for v in cls.__dict__.values():
-            if isinstance(v, InnerPlaintextPrinter):
-                cls._inner_printers.append(v)
-            if isinstance(v, InnerPlaintextParser):
-                cls._inner_parsers.append(v)
-        for base in cls.__bases__:
-            cls._inner_printers.extend(getattr(base, '_inner_printers', ()))
-            cls._inner_parsers.extend(getattr(base, '_inner_parsers', ()))
+            if getattr(v, '__plaintext_printer__', False):
+                inner_printers.append(v)
+            if getattr(v, '__plaintext_parser__', False):
+                inner_parsers.append(v)
 
+        if inner_printers:
+            def inner_printers_func(self):
+                yield from (p.__get__(self, type(self)) for p in inner_printers)
 
-class ParseError(Exception):
-    pass
+            cls._inner_plaintext_printers = inner_printers_func
 
+        if inner_parsers:
+            def inner_parsers_func(self):
+                yield from (p.__get__(self, type(self)) for p in inner_parsers)
 
-class ValidationError(Exception, Generic[T]):
-    pass
+            cls._inner_plaintext_parsers = inner_parsers_func
 
 
 class DoNotFill(Exception):
+    """
+    if this exception is raised from an auto_func, a value is not filled in.
+    """
     pass
 
 
 class PlaintextEditWidget(Generic[T], ValueWidget[T]):
+    """
+    plaintext dialog for a ValueWidget
+    """
+
     class _ShiftEnterIgnoringPlainTextEdit(QPlainTextEdit):
+        """
+        A QPlainTextEdit that ignores shift+enter
+        """
+
         def keyPressEvent(self, event):
             if (event.modifiers() == Qt.ShiftModifier and event.key() == Qt.Key_Return) \
                     or (event.modifiers() == Qt.KeypadModifier | Qt.ShiftModifier and event.key() == Qt.Key_Enter):
@@ -448,7 +569,6 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
     NO_CURRENT_VALUE = object()
 
     MAKE_INDICATOR = True
-
     MAKE_PLAINTEXT = False
     MAKE_TITLE = False
 
@@ -473,7 +593,7 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
 
     def init_ui(self):
         super().init_ui()
-        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowModality(Qt.WindowModal)
 
         master_layout = QVBoxLayout(self)
 
@@ -584,18 +704,24 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
 
         self.print_edit.setPlainText(text)
 
-    def prep_for_show(self, owner: ValueWidget[T], clear_parse=True, clear_print=True):
-        self.owner = owner
+    def prep_for_show(self, clear_parse=True, clear_print=True):
+        """
+        prepare a dialog with a new owner and value.
+        :param clear_parse: whether to clear and reset the parse UI
+        :param clear_print: whether to clear and reset the print UI
+        """
 
-        self.setWindowTitle('plaintext edit for ' + owner.title)
+        self.setWindowTitle('plaintext edit for ' + self.owner.title)
 
-        state, self.current_value, _ = owner.value()
-        if not state.is_ok():
+        owner_value = self.owner.value()
+        if not owner_value.is_ok():
             self.print_widget.setVisible(False)
             printers = False
         else:
+            self.current_value = owner_value.value
+
             self.print_widget.setVisible(True)
-            printers = list(owner.plaintext_printers())
+            printers = list(self.owner.plaintext_printers())
             # setup the print
 
             combo_index = 0
@@ -609,7 +735,7 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
             self.print_combo.clear()
             if len(printers) > 1:
                 self.print_combo.setVisible(True)
-                self.print_combo.addItem('<all>', owner.joined_plaintext_printer)
+                self.print_combo.addItem('<all>', self.owner.joined_plaintext_printer)
             else:
                 self.print_combo.setVisible(False)
 
@@ -621,13 +747,13 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
 
             self.print_combo.setCurrentIndex(combo_index)
 
-        parsers = list(owner.plaintext_parsers())
+        parsers = list(self.owner.plaintext_parsers())
         if not parsers:
             self.parse_widget.setVisible(False)
         else:
-            if not owner.fill:
+            if not self.owner.fill:
                 raise Exception(
-                    f'parsers are defined but the widget has no implemented fill method (in widget {owner})')
+                    f'parsers are defined but the widget has no implemented fill method (in widget {self.owner})')
 
             self.parse_widget.setVisible(True)
             combo_index = 0
@@ -642,7 +768,7 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
             self.parse_combo.clear()
             if len(parsers) > 1:
                 self.parse_combo.setVisible(True)
-                self.parse_combo.addItem('<all>', owner.joined_plaintext_parser)
+                self.parse_combo.addItem('<all>', self.owner.joined_plaintext_parser)
             else:
                 self.parse_combo.setVisible(False)
 
@@ -654,23 +780,23 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
             self.parse_combo.setCurrentIndex(combo_index)
 
         if not printers and not parsers:
-            raise ValueError('plaintext edit widget prepped for owner without plaintext adapters')
+            raise ValueError('plaintext edit widget prepped for owner without any plaintext adapters')
 
     def commit_parse(self):
-        status, value, _ = self.value()
-        if not status.is_ok():
+        parsed = self.value()
+        if not parsed.is_ok():
             QMessageBox.critical(self, 'error parsing plaintext', error_details(self.result_value))
         else:
-            self.owner.fill(value)
+            self.owner.fill(parsed.value)
             self.close()
 
     def apply_parse(self):
-        status, value, _ = self.value()
-        if not status.is_ok():
+        parsed = self.value()
+        if not parsed.is_ok():
             QMessageBox.critical(self, 'error parsing plaintext', error_details(self.result_value))
         else:
-            self.owner.fill(value)
-            self.prep_for_show(self.owner, clear_parse=False, clear_print=False)
+            self.owner.fill(parsed.value)
+            self.prep_for_show(clear_parse=False, clear_print=False)
             self.parse_edit.setFocus()
 
     @property
@@ -682,7 +808,7 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
         return bool(self.printers)
 
     def _on_value_change(self, *a):
-        state, _, _ = self.value()
+        state = self.value().value_state
 
         self.ok_button.setEnabled(state.is_ok())
         self.apply_button.setEnabled(state.is_ok())

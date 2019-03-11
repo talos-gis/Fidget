@@ -7,6 +7,7 @@ from functools import wraps
 T = TypeVar('T')
 
 
+# todo also pass through unparameterised raise
 def error_details(e: Exception):
     ret = []
     type_names = []
@@ -46,6 +47,11 @@ def exc_wrap(to_raise: Type[Exception]):
         if func:
             return ret(func)
         return ret
+
+    ret.__doc__ = \
+        f"""
+        wraps a function so it catches all exceptions of a type and re-throws it as a {to_raise.__name__}  
+        """
 
     return ret
 

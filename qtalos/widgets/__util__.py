@@ -15,6 +15,11 @@ win_illegal_suffixes = frozenset(' .')
 
 
 def filename_valid(path: Path):
+    """
+    Check whether a file path seems legal
+    :param path: the file path
+    :return: whether a file path seems legal
+    """
     if os.name == 'nt':
         parts = path.parts
         if path.drive:
@@ -36,10 +41,18 @@ def filename_valid(path: Path):
 
 
 def is_trivial_printer(p):
+    """
+    check if a printer is a trivial printer
+    :param p: the printer to check
+    """
     return p in (str, repr)
 
 
 def only_valid(**kwargs: Optional[T]) -> T:
+    """
+    check that only one of the arguments is not None, and return its value
+    :return: the value of the only not-None argument
+    """
     valid = None
     for k, v in kwargs.items():
         if v is None:

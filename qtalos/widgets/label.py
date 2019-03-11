@@ -2,7 +2,7 @@ from typing import TypeVar, Generic, Tuple, Union
 
 from qtalos.backend.QtWidgets import QLabel, QHBoxLayout
 
-from qtalos.core import ValueWidget, InnerPlaintextParser, PlaintextParseError, PlaintextPrintError
+from qtalos.core import ValueWidget, inner_plaintext_parser, PlaintextParseError, PlaintextPrintError
 
 T = TypeVar('T')
 
@@ -67,7 +67,7 @@ class LabelValueWidget(Generic[T], ValueWidget[T]):
 
         return first_name, frozenset(names), value
 
-    @InnerPlaintextParser
+    @inner_plaintext_parser
     def singleton(self, v):
         if v not in self.names:
             raise PlaintextParseError(f'can only parse {self.names}')

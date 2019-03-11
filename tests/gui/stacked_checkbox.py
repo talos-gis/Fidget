@@ -1,4 +1,4 @@
-from qtalos.backend import QApplication, QHBoxLayout, QFrame
+from qtalos.backend.QtWidgets import QApplication, QHBoxLayout, QFrame
 
 from qtalos.widgets import LabelValueWidget, IntEdit, StackedValueWidget
 

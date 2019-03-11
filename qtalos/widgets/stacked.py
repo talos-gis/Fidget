@@ -115,8 +115,6 @@ class StackedValueWidget(Generic[T], MultiWidgetWrapper[T, T]):
 
             self.check_box: QCheckBox = None
 
-            self.value_count = 0
-
             self.init_ui()
 
         def init_ui(self):
@@ -126,12 +124,15 @@ class StackedValueWidget(Generic[T], MultiWidgetWrapper[T, T]):
             layout.addWidget(self.check_box)
 
         def parse(self):
-            return int(self.check_box.isChecked())
+            ret = int(self.check_box.isChecked())
+            if ret >= len(self.options):
+                raise Exception('option not implemented')
+            return ret
 
         def add_option(self, name):
-            if self.value_count >= 2:
+            if len(self.options) >= 2:
                 raise Exception('CheckBoxSelector can only contain 2 values')
-            if self.value_count == 1:
+            if len(self.options) == 1:
                 self.check_box.setText(name)
             else:
                 self.check_box.setChecked(False)
@@ -139,6 +140,8 @@ class StackedValueWidget(Generic[T], MultiWidgetWrapper[T, T]):
 
         def fill(self, index):
             if isinstance(index, int):
+                if index >= len(self.options):
+                    raise Exception('option not implemented')
                 self.check_box.setChecked(bool(index))
             super().fill(index)
 
@@ -263,26 +266,8 @@ class StackedValueWidget(Generic[T], MultiWidgetWrapper[T, T]):
         return template.title, template
 
     def _selector_changed(self):
-        state, index, _ = self.selector.value()
-        if not state.is_ok():
-            raise index
-        self.stacked.setCurrentIndex(index)
+        index = self.selector.value()
+        if not index.is_ok():
+            raise index.value
+        self.stacked.setCurrentIndex(index.value)
         self.change_value()
-
-
-if __name__ == '__main__':
-    from qtalos.backend import QApplication, QHBoxLayout
-
-    from qtalos.widgets import ValueCheckBox, ValueCombo, IntEdit
-
-    app = QApplication([])
-    w = StackedValueWidget('number', [
-        IntEdit('raw text', make_indicator=True),
-        ValueCheckBox('sign', (0, 1)),
-        ValueCombo('named', [('dozen', 12), ('one', 1), ('seven', 7)])
-    ], make_plaintext=True, make_title=True, frame_style=QFrame.Box, selector_cls=StackedValueWidget.RadioSelector,
-                           layout_cls=QHBoxLayout)
-    w.show()
-    res = app.exec_()
-    print(w.value())
-    exit(res)

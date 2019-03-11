@@ -2,7 +2,7 @@ from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List, Callabl
 
 from qtalos.backend.QtWidgets import QComboBox, QHBoxLayout
 
-from qtalos.core import ValueWidget, PlaintextPrintError, InnerPlaintextParser, PlaintextParseError, ParseError
+from qtalos.core import ValueWidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
 
 T = TypeVar('T')
 
@@ -104,7 +104,7 @@ class ValueEditCombo(Generic[T], ValueWidget[T]):
 
         self.combo_box.setCurrentIndex(index)
 
-    @InnerPlaintextParser
+    @inner_plaintext_parser
     def by_name(self, name):
         try:
             _, ret = self._opt_lookup_name[name]
@@ -113,12 +113,13 @@ class ValueEditCombo(Generic[T], ValueWidget[T]):
         else:
             return ret
 
-    @InnerPlaintextParser
+    @inner_plaintext_parser
     def by_convert(self, v):
         try:
-            return self.convert(v)
+            _ = self.convert(v)
         except ParseError as e:
             raise PlaintextParseError(...) from e
+        return v
 
     def convert(self, v: str):
         # we leave this function for potential inheritors
@@ -126,8 +127,8 @@ class ValueEditCombo(Generic[T], ValueWidget[T]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend import QApplication
-    from qtalos import wrap_parser
+    from qtalos.backend.QtWidgets import QApplication
+    from qtalos.core import wrap_parser
 
     app = QApplication([])
     w = ValueEditCombo('sample',
@@ -136,7 +137,10 @@ if __name__ == '__main__':
                            ('two', 2),
                            ('three', 3)
                        ],
-                       convert_func=wrap_parser(ValueError, int)
+                       convert_func=wrap_parser(ValueError, int),
+                       make_title=True,
+                       make_plaintext=True,
+                       make_indicator=True
                        )
     w.show()
     res = app.exec_()
