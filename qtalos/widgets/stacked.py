@@ -7,11 +7,11 @@ from functools import partial
 from abc import abstractmethod
 from itertools import chain
 
-from qtalos.backend import QVBoxLayout, QStackedWidget, QComboBox, QFrame, QRadioButton, QGroupBox, QCheckBox, \
-    QBoxLayout
+from qtalos.backend.QtWidgets import QVBoxLayout, QStackedWidget, QComboBox, QFrame, QRadioButton, QGroupBox, \
+    QCheckBox, QBoxLayout
 
-from qtalos import ValueWidget, ParseError, ValueWidgetTemplate
-from qtalos.__util__ import first_valid
+from qtalos.core import ValueWidget, ParseError, ValueWidgetTemplate
+from qtalos.core.__util__ import first_valid
 
 from qtalos.widgets.widget_wrappers import MultiWidgetWrapper
 from qtalos.widgets.__util__ import only_valid
@@ -23,7 +23,7 @@ NamedTemplate = Union[
 ]
 
 
-class StackedValueWidget(Generic[T], MultiWidgetWrapper[T,T]):
+class StackedValueWidget(Generic[T], MultiWidgetWrapper[T, T]):
     class Selector(ValueWidget[int]):
         MAKE_INDICATOR = MAKE_PLAINTEXT = MAKE_TITLE = False
 
@@ -147,7 +147,7 @@ class StackedValueWidget(Generic[T], MultiWidgetWrapper[T,T]):
     targeted_fill = namedtuple('targeted_fill', 'option_name value')
 
     def __init__(self, title, inner_templates: Iterable[NamedTemplate[T]] = None,
-                 frame_style=None, selector_cls: Union[Type[Selector], str] = ComboSelector,
+                 frame_style=None, selector_cls: Union[Type[Selector], str] = None,
                  layout_cls: Type[QBoxLayout] = None,
                  **kwargs):
         self.inner_templates = dict(
@@ -163,6 +163,7 @@ class StackedValueWidget(Generic[T], MultiWidgetWrapper[T,T]):
 
         self.selector: StackedValueWidget.Selector = None
 
+        selector_cls = first_valid(selector_cls=selector_cls, SELECTOR_CLS=self.SELECTOR_CLS)
         if isinstance(selector_cls, str):
             selector_cls = self.selectors[selector_cls]
         self.selector_cls = selector_cls
@@ -172,6 +173,7 @@ class StackedValueWidget(Generic[T], MultiWidgetWrapper[T,T]):
 
     INNER_TEMPLATES: Iterable[NamedTemplate[T]] = None
     LAYOUT_CLS: Type[QBoxLayout] = QVBoxLayout
+    SELECTOR_CLS: Union[Type[Selector], str] = 'combo'
 
     def init_ui(self, frame_style=None, layout_cls=None):
         super().init_ui()

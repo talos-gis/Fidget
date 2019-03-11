@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-from typing import Optional, TypeVar, Generic
+from typing import TypeVar, Generic, Union
 
 from itertools import chain
 from functools import wraps, partial
 
-from qtalos.backend import \
- \
-    QCheckBox, QHBoxLayout, QWidget, QApplication, \
- \
-    QObject, QEvent, \
- \
-    __backend__
+from qtalos.backend.QtWidgets import QCheckBox, QHBoxLayout, QWidget, QApplication
+from qtalos.backend.QtCore import QObject, QEvent, __backend__
 
-from qtalos import ValueWidget, PlaintextPrintError, none_parser, ValueWidgetTemplate
+from qtalos.core import ValueWidget, PlaintextPrintError, none_parser, ValueWidgetTemplate
+from qtalos.core.__util__ import first_valid
 
 from qtalos.widgets.widget_wrappers import SingleWidgetWrapper
 from qtalos.widgets.__util__ import only_valid
@@ -22,9 +18,11 @@ if __backend__.__name__ == 'PySide2':
     import shiboken2
 
 T = TypeVar('T')
+C = TypeVar('C')
 
 
-class OptionalValueWidget(Generic[T], SingleWidgetWrapper[T, Optional[T]]):
+# todo optional is only valid if none_value is None
+class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
     class MouseWarden(QObject):
         def __init__(self, *args, target, dispatch, **kwargs):
             super().__init__(*args, **kwargs)
@@ -42,8 +40,8 @@ class OptionalValueWidget(Generic[T], SingleWidgetWrapper[T, Optional[T]]):
                 return False
             return super().eventFilter(obj, event)
 
-    def __init__(self, inner_template: ValueWidgetTemplate[T] = None, default_state=False, layout_cls=...,
-                 none_value=None,
+    def __init__(self, inner_template: ValueWidgetTemplate[T] = None, default_state=False, layout_cls=None,
+                 none_value: C = None,
                  **kwargs):
 
         inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
@@ -65,12 +63,11 @@ class OptionalValueWidget(Generic[T], SingleWidgetWrapper[T, Optional[T]]):
         self.not_none_checkbox.setChecked(default_state)
 
     INNER_TEMPLATE: ValueWidgetTemplate[T] = None
-    default_layout_cls = QHBoxLayout
+    LAYOUT_CLS = QHBoxLayout
 
-    def init_ui(self, layout_cls=...):
+    def init_ui(self, layout_cls=None):
         super().init_ui()
-        if layout_cls is ...:
-            layout_cls = self.default_layout_cls
+        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
 
         layout = layout_cls(self)
 
@@ -142,13 +139,17 @@ class OptionalValueWidget(Generic[T], SingleWidgetWrapper[T, Optional[T]]):
 class OptionalTemplate(Generic[T], ValueWidgetTemplate[T]):
     @property
     def title(self):
-        if self.args:
-            inner = self.args[0]
-            try:
-                return inner.title
-            except AttributeError:
-                pass
+        it = self._inner_template()
+        if it:
+            return it.title
         return super().title
+
+    def _inner_template(self):
+        if self.widget_cls.INNER_TEMPLATE:
+            return self.widget_cls.INNER_TEMPLATE
+        if self.args:
+            return self.args[0].template_of()
+        return None
 
 
 if __name__ == '__main__':

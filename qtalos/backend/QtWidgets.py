@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Type
 
-from qtalos.backends import load, prefer
+from qtalos.backend import load
 
 if TYPE_CHECKING:
     import PyQt5.QtWidgets
-    import PyQt5.QtCore
 
 __backend__ = load()
 
@@ -31,8 +30,3 @@ QScrollArea: Type[PyQt5.QtWidgets.QScrollArea] = __backend__['QtWidgets', 'QScro
 QStackedWidget: Type[PyQt5.QtWidgets.QStackedWidget] = __backend__['QtWidgets', 'QStackedWidget']
 QVBoxLayout: Type[PyQt5.QtWidgets.QVBoxLayout] = __backend__['QtWidgets', 'QVBoxLayout']
 QWidget: Type[PyQt5.QtWidgets.QWidget] = __backend__['QtWidgets', 'QWidget']
-
-QEvent: Type[PyQt5.QtCore.QEvent] = __backend__['QtCore', 'QEvent']
-QObject: Type[PyQt5.QtCore.QObject] = __backend__['QtCore', 'QObject']
-Qt: Type[PyQt5.QtCore.Qt] = __backend__['QtCore', 'Qt']
-pyqtSignal: Type[PyQt5.QtCore.pyqtSignal] = __backend__['QtCore', 'pyqtSignal']

@@ -2,7 +2,7 @@ from typing import Dict, Union, Optional
 
 from warnings import warn
 
-from qtalos.backends.qtbackend import QtBackend, PyQt5_backend, PySide2_backend
+from qtalos.backend.qtbackend import QtBackend, PyQt5_backend, PySide2_backend
 
 priority: Optional[QtBackend] = None
 fail_ok = True
@@ -60,4 +60,4 @@ def load() -> QtBackend:
             loaded = backend
             return loaded
 
-    raise first_err or Exception('no backends are configured')
+    raise first_err or Exception('no backend are configured')

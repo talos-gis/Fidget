@@ -9,18 +9,13 @@ from pathlib import Path
 from functools import partial, wraps
 from itertools import chain
 
-from qtalos.backend import \
- \
-    QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
-    QMessageBox, QFileDialog, QGroupBox, QGridLayout, \
- \
-    Qt, pyqtSignal, \
- \
-    __backend__
+from qtalos.backend.QtWidgets import QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
+    QMessageBox, QFileDialog, QGroupBox, QGridLayout
+from qtalos.backend.QtCore import Qt, pyqtSignal, __backend__
 
-from qtalos.plaintext_adapter import PlaintextPrinter, PlaintextParser, PlaintextParseError, PlaintextPrintError, \
+from qtalos.core.plaintext_adapter import PlaintextPrinter, PlaintextParser, PlaintextParseError, PlaintextPrintError, \
     join_parsers, join_printers, InnerPlaintextParser, InnerPlaintextPrinter
-from qtalos.__util__ import error_details, error_tooltip, first_valid
+from qtalos.core.__util__ import error_details, error_tooltip, first_valid
 
 T = TypeVar('T')
 
@@ -330,6 +325,18 @@ class ValueWidget(QWidget, Generic[T]):
     def __str__(self):
         return super().__str__() + ': ' + self.title
 
+    @classmethod
+    def show_as_main(cls, *args, **kwargs):
+        import sys
+        from qtalos.backend import QApplication
+
+        app = QApplication(sys.argv)
+        w = cls(*args, **kwargs)
+        w.show()
+        res = app.exec_()
+        if res:
+            exit(res)
+        return w.value()
     # endregion
 
     def _invalidate_value(self):

@@ -1,11 +1,12 @@
-from typing import Optional
+from typing import Optional, Dict, Union, Callable, Any
 
 from pathlib import Path
 from glob import iglob
 
-from qtalos.backend import QHBoxLayout, QLineEdit, QFileDialog, QPushButton
+from qtalos.backend.QtWidgets import QHBoxLayout, QLineEdit, QFileDialog, QPushButton
 
-from qtalos import ValueWidget, ValidationError, PlaintextParseError
+from qtalos.core import ValueWidget, ValidationError, PlaintextParseError
+from qtalos.core.__util__ import first_valid
 
 from qtalos.widgets.__util__ import filename_valid
 
@@ -27,12 +28,15 @@ def glob_search(pattern):
     return Path(ret)
 
 
+FileDialogArgs = Union[Callable[..., QFileDialog], Dict[str, Any], QFileDialog]
+
+
 class FilePathWidget(ValueWidget[Path]):
     MAKE_INDICATOR = True
     MAKE_PLAINTEXT = False
 
     def __init__(self, title: str, parent=None, flags=None, exist_cond: Optional[bool] = True,
-                 dialog: QFileDialog = ..., **kwargs):
+                 dialog: FileDialogArgs = None, **kwargs):
         super().__init__(title, parent=parent, flags=flags, **kwargs)
         self.exist_cond = exist_cond
 
@@ -41,11 +45,11 @@ class FilePathWidget(ValueWidget[Path]):
 
         self.init_ui(dialog)
 
-    def init_ui(self, dialog=...):
+    DIALOG: FileDialogArgs = QFileDialog
+
+    def init_ui(self, dialog=None):
         super().init_ui()
-        if dialog is ...:
-            dialog = QFileDialog()
-        self.dialog = dialog
+        self.dialog = self._args_to_filedialog(first_valid(dialog=dialog, DIALOG=self.DIALOG))
 
         if self.exist_cond:
             self.dialog.setFileMode(QFileDialog.ExistingFile)
@@ -102,6 +106,16 @@ class FilePathWidget(ValueWidget[Path]):
         yield Path
         yield glob_search
         yield from super().plaintext_parsers()
+
+    @staticmethod
+    def _args_to_filedialog(arg):
+        if isinstance(arg, QFileDialog):
+            return arg
+        if isinstance(arg, dict):
+            return QFileDialog(**arg)
+        if callable(arg):
+            return arg()
+
 
 
 if __name__ == '__main__':

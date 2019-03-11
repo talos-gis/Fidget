@@ -1,8 +1,8 @@
 from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List
 
-from qtalos.backend import QComboBox, QHBoxLayout
+from qtalos.backend.QtWidgets import QComboBox, QHBoxLayout
 
-from qtalos import ValueWidget, PlaintextPrintError, InnerPlaintextParser, PlaintextParseError, ParseError
+from qtalos.core import ValueWidget, PlaintextPrintError, InnerPlaintextParser, PlaintextParseError, ParseError
 
 T = TypeVar('T')
 

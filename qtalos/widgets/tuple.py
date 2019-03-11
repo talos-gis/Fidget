@@ -4,11 +4,11 @@ from typing import Type, Iterable, Tuple, Union, TypeVar, Sequence, Any
 import json
 from itertools import chain
 
-from qtalos.backend import QVBoxLayout, QFrame, QBoxLayout
+from qtalos.backend.QtWidgets import QVBoxLayout, QFrame, QBoxLayout
 
-from qtalos import ValueWidget, ParseError, ValidationError, InnerPlaintextParser, InnerPlaintextPrinter, \
+from qtalos.core import ValueWidget, ParseError, ValidationError, InnerPlaintextParser, InnerPlaintextPrinter, \
     PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
-from qtalos.__util__ import first_valid
+from qtalos.core.__util__ import first_valid
 
 from qtalos.widgets.widget_wrappers import MultiWidgetWrapper
 from qtalos.widgets.__util__ import only_valid

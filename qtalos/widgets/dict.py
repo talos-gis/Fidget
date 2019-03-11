@@ -3,12 +3,11 @@ from __future__ import annotations
 from typing import Union, Mapping, Iterable, Tuple, TypeVar, Dict, Type, Any
 import json
 
-from qtalos.backend import \
-    QVBoxLayout, QFrame, QScrollArea, QWidget, QBoxLayout
+from qtalos.backend.QtWidgets import QVBoxLayout, QFrame, QScrollArea, QWidget, QBoxLayout
 
-from qtalos import ValueWidget, ParseError, ValidationError, InnerPlaintextParser, InnerPlaintextPrinter, \
+from qtalos.core import ValueWidget, ParseError, ValidationError, InnerPlaintextParser, InnerPlaintextPrinter, \
     PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
-from qtalos.__util__ import first_valid
+from qtalos.core.__util__ import first_valid
 
 from qtalos.widgets.widget_wrappers import MultiWidgetWrapper
 from qtalos.widgets.__util__ import only_valid

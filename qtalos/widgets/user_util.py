@@ -2,7 +2,7 @@ from typing import Callable, TypeVar, Generic
 
 from functools import partial
 
-from qtalos import format_printer, regex_parser, PlaintextParseError, wrap_parser, ValueWidget
+from qtalos.core import format_printer, regex_parser, PlaintextParseError, wrap_parser, ValueWidget
 
 from qtalos.widgets.line import LineEdit
 from qtalos.widgets.converter import ConverterWidget
