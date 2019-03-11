@@ -12,7 +12,7 @@ from qtalos.widgets.stacked import StackedValueWidget
 from qtalos.widgets.tuple import TupleWidget
 from qtalos.widgets.user_util import IntEdit, FloatEdit, ComplexEdit, SimpleEdit
 
-# todo pick a standard name and stick to it
+# todo pick a standard naming scheme and stick to it
 
 # todo multi-file widget
 # todo directory widget
@@ -26,5 +26,3 @@ from qtalos.widgets.user_util import IntEdit, FloatEdit, ComplexEdit, SimpleEdit
 # todo script editor widget?
 # todo slider widget
 # todo rich text editor?
-
-# todo templates

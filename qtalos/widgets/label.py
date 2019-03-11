@@ -13,7 +13,6 @@ class LabelValueWidget(Generic[T], ValueWidget[T]):
     MAKE_INDICATOR = MAKE_TITLE = MAKE_PLAINTEXT = False
 
     def __init__(self, title, value: Union[Tuple[str, T], T], **kwargs):
-        kwargs.setdefault('make_title', False)
         super().__init__(title, **kwargs)
 
         self.label: QLabel = None

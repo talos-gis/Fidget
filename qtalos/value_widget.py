@@ -446,8 +446,6 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
     MAKE_TITLE = False
 
     def __init__(self, *args, **kwargs):
-        # todo set window title?
-        kwargs.setdefault('make_title', False)
         super().__init__('plaintext edit', *args, **kwargs)
 
         self.current_value: T = self.NO_CURRENT_VALUE

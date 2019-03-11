@@ -14,7 +14,6 @@ T = TypeVar('T')
 F = TypeVar('F')
 
 
-# todo common superclass for this & optional
 class ConverterWidget(Generic[F, T], SingleWidgetWrapper[F, T]):
     def __init__(self, inner_template: ValueWidgetTemplate[F] = None,
                  converter_func: Callable[[F], T] = None,

@@ -20,7 +20,6 @@ NamedTemplate = Union[
 ]
 
 
-# todo common superclass for this & stacked (&tuple)
 class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
     def __init__(self, title, inner_templates: Iterable[NamedTemplate] = None, frame_style=None,
                  layout_cls: Type[QBoxLayout] = None, scrollable=False, **kwargs):
