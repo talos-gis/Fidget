@@ -6,28 +6,33 @@ from qtalos.backend.QtWidgets import QLineEdit, QHBoxLayout
 
 from qtalos.core import ValueWidget, inner_plaintext_parser, ValidationError
 
+from qtalos.widgets.__util__ import optional_valid
+
 
 class LineEdit(ValueWidget[str]):
+    """
+    A string ValueWidget, in the form of a QLineEdit
+    """
     MAKE_INDICATOR = MAKE_TITLE = MAKE_PLAINTEXT = False
+    PATTERN = None
 
-    def __init__(self, title: str, *args, pattern: Union[str, Pattern[str]] = None, placeholder=True,
+    def __init__(self, title: str, pattern: Union[str, Pattern[str]] = None, placeholder=True,
                  **kwargs):
-        super().__init__(title, *args, **kwargs)
+        """
+        :param title: the title
+        :param pattern: a regex pattern the value must match to be validated
+        :param placeholder: whether to display the widget's title in a placeholder
+        :param kwargs: forwarded to ValueWidget
+        """
+        super().__init__(title, **kwargs)
 
-        provided_pattern = self.make_pattern()
-        if provided_pattern and pattern:
-            raise Exception('pattern provided when make_pattern is implemented')
+        pattern = optional_valid(pattern=pattern, PATTERN=self.PATTERN)
 
-        pattern = pattern or provided_pattern
-
-        self.pattern: Optional[Pattern[str]] = re.compile(pattern) if pattern else None
+        self.pattern: Optional[Pattern[str]] = re.compile(pattern) if isinstance(pattern, str) else pattern
 
         self.edit: QLineEdit = None
 
         self.init_ui(placeholder=placeholder and self.title)
-
-    def make_pattern(self) -> Union[str, Pattern[str], None]:
-        return None
 
     def init_ui(self, placeholder=None):
         super().init_ui()

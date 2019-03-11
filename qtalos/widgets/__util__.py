@@ -63,3 +63,20 @@ def only_valid(**kwargs: Optional[T]) -> T:
     if valid is None:
         raise TypeError(f'none of {", ".join(kwargs.keys())} provided')
     return valid[1]
+
+
+def optional_valid(**kwargs: Optional[T]) -> Optional[T]:
+    """
+    check at most one of the arguments is not None, and return its value
+    :return: the value of the only not-None argument, or None
+    """
+    valid = None
+    for k, v in kwargs.items():
+        if v is None:
+            continue
+        if valid is not None:
+            raise TypeError(f'both {valid[0]} and {k} provided')
+        valid = k, v
+    if valid is None:
+        return None
+    return valid[1]

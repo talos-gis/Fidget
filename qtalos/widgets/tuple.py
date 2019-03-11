@@ -10,7 +10,7 @@ from qtalos.core import ValueWidget, ParseError, ValidationError, inner_plaintex
     PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
 from qtalos.core.__util__ import first_valid
 
-from qtalos.widgets.widget_wrappers import MultiWidgetWrapper
+from qtalos.widgets.idiomatic_inner import MultiWidgetWrapper
 from qtalos.widgets.__util__ import only_valid
 
 T = TypeVar('T')

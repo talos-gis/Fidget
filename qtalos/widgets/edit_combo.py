@@ -8,6 +8,9 @@ T = TypeVar('T')
 
 
 class ValueEditCombo(Generic[T], ValueWidget[T]):
+    """
+    A ValueWidget for an editable ComboBox
+    """
     NO_DEFAULT_VALUE = object()
     CONVERT_NAME = object()
 
@@ -15,6 +18,14 @@ class ValueEditCombo(Generic[T], ValueWidget[T]):
                  convert_func: Callable[[str], T] = lambda x: x,
                  default_index=-1, default_value: T = NO_DEFAULT_VALUE,
                  **kwargs):
+        """
+        :param title: the title
+        :param options: an iterable of options
+        :param convert_func: a function to convert plaintext edited value to a value
+        :param default_index: the default index of the ComboBox. ignored if a valid default_value is provided
+        :param default_value: the default value of the ComboBox
+        :param kwargs: forwarded to ValueWidget
+        """
         super().__init__(title, **kwargs)
         self.default_index = default_index
         self.default_value = default_value

@@ -32,13 +32,21 @@ FileDialogArgs = Union[Callable[..., QFileDialog], Dict[str, Any], QFileDialog]
 
 
 class FilePathWidget(ValueWidget[Path]):
+    """
+    A ValueWidget to store a Path to a file
+    """
     MAKE_INDICATOR = True
     MAKE_PLAINTEXT = False
 
-    def __init__(self, title: str, parent=None, flags=None, exist_cond: Optional[bool] = True,
-                 dialog: FileDialogArgs = None, **kwargs):
-        super().__init__(title, parent=parent, flags=flags, **kwargs)
-        self.exist_cond = exist_cond
+    def __init__(self, title: str, exist_cond: Optional[bool] = None, dialog: FileDialogArgs = None, **kwargs):
+        """
+        :param title: the title
+        :param exist_cond: whether the file must exist (True), or must not exist (False)
+        :param dialog: either a QFileDialog, a constructor, or arguments for a QFileDialog.
+        :param kwargs: forwarded to ValueWidget
+        """
+        super().__init__(title, **kwargs)
+        self.exist_cond = exist_cond if exist_cond is not None else self.EXIST_COND
 
         self.dialog: QFileDialog = None
         self.edit: QLineEdit = None
@@ -46,6 +54,7 @@ class FilePathWidget(ValueWidget[Path]):
         self.init_ui(dialog)
 
     DIALOG: FileDialogArgs = QFileDialog
+    EXIST_COND = None
 
     def init_ui(self, dialog=None):
         super().init_ui()

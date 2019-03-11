@@ -7,7 +7,7 @@ from qtalos.backend.QtWidgets import QHBoxLayout
 
 from qtalos.core import ValueWidget, ParseError, PlaintextParseError, ValueWidgetTemplate
 
-from qtalos.widgets.widget_wrappers import SingleWidgetWrapper
+from qtalos.widgets.idiomatic_inner import SingleWidgetWrapper
 from qtalos.widgets.__util__ import is_trivial_printer, only_valid
 
 T = TypeVar('T')
@@ -15,10 +15,19 @@ F = TypeVar('F')
 
 
 class ConverterWidget(Generic[F, T], SingleWidgetWrapper[F, T]):
+    """
+    A ValueWidget wrapper that only converts the value to another type
+    """
     def __init__(self, inner_template: ValueWidgetTemplate[F] = None,
                  converter_func: Callable[[F], T] = None,
                  back_converter_func: Optional[Callable[[T], F]] = None,
                  **kwargs):
+        """
+        :param inner_template: the template to wrap
+        :param converter_func: a conversion function
+        :param back_converter_func: a backwards conversion function
+        :param kwargs: forwarded to either the inner template or ValueWidget
+        """
 
         inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
 

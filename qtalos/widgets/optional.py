@@ -11,7 +11,7 @@ from qtalos.backend.QtCore import QObject, QEvent, __backend__
 from qtalos.core import ValueWidget, PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate
 from qtalos.core.__util__ import first_valid
 
-from qtalos.widgets.widget_wrappers import SingleWidgetWrapper
+from qtalos.widgets.idiomatic_inner import SingleWidgetWrapper
 from qtalos.widgets.__util__ import only_valid
 
 if __backend__.__name__ == 'PySide2':
@@ -22,6 +22,9 @@ C = TypeVar('C')
 
 
 class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
+    """
+    A ValueWidget wrapper that allows an inner ValueWidget to be disabled, setting the value to None or another singleton
+    """
     singleton_names = {
         None: frozenset(['none']),
         NotImplemented: frozenset(['notimplemented', 'not implemented']),
@@ -32,6 +35,9 @@ class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
     }
 
     class MouseWarden(QObject):
+        """
+        An event filter that enables the disabled inner widget when clicked
+        """
         def __init__(self, *args, target, dispatch, **kwargs):
             super().__init__(*args, **kwargs)
             self.target = target
@@ -51,6 +57,13 @@ class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
     def __init__(self, inner_template: ValueWidgetTemplate[T] = None, default_state=False, layout_cls=None,
                  none_value: C = None,
                  **kwargs):
+        """
+        :param inner_template: the template to wrap
+        :param default_state: whether the default value of the widget will be enabled
+        :param layout_cls: the layout class
+        :param none_value: the value to set when the widget is disabled
+        :param kwargs: forwarded to ValueWidget
+        """
 
         inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
 

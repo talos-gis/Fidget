@@ -587,7 +587,7 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
         self.parse_edit: PlaintextEditWidget._ShiftEnterIgnoringPlainTextEdit = None
         self.parse_combo: QComboBox = None
 
-        self.owner: Optional[ValueWidget[T]] = None
+        self.owner: Optional[ValueWidget[T]] = kwargs.get('parent')
 
         self.init_ui()
 

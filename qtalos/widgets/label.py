@@ -8,11 +8,19 @@ T = TypeVar('T')
 
 
 class LabelValueWidget(Generic[T], ValueWidget[T]):
+    """
+    A ValueWidget that immutably contains a single value
+    """
     NO_DEFAULT_VALUE = object()
 
     MAKE_INDICATOR = MAKE_TITLE = MAKE_PLAINTEXT = False
 
     def __init__(self, title, value: Union[Tuple[str, T], T], **kwargs):
+        """
+        :param title: the title
+        :param value: the single value to display
+        :param kwargs: forwarded to ValueWidget
+        """
         super().__init__(title, **kwargs)
 
         self.label: QLabel = None

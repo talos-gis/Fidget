@@ -9,7 +9,7 @@ from qtalos.core import ValueWidget, ParseError, ValidationError, inner_plaintex
     PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
 from qtalos.core.__util__ import first_valid
 
-from qtalos.widgets.widget_wrappers import MultiWidgetWrapper
+from qtalos.widgets.idiomatic_inner import MultiWidgetWrapper
 from qtalos.widgets.__util__ import only_valid
 
 T = TypeVar('T')
@@ -20,8 +20,19 @@ NamedTemplate = Union[
 
 
 class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
+    """
+    A ValueWidget that wraps multiple ValueWidgets into a dict with str keys
+    """
     def __init__(self, title, inner_templates: Iterable[NamedTemplate] = None, frame_style=None,
                  layout_cls: Type[QBoxLayout] = None, scrollable=False, **kwargs):
+        """
+        :param title: the title
+        :param inner_templates: an iterable of name-templates to act as key-value pairs
+        :param frame_style: the frame style to apply to the encompassing frame, if any
+        :param layout_cls: the class of the layout
+        :param scrollable: whether to make the widget scrollable
+        :param kwargs: forwarded to ValueWidget
+        """
 
         inner_templates = dict(
             self._to_name_subtemplate(o) for o in
@@ -36,10 +47,13 @@ class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
 
         self.inners: Dict[str, ValueWidget] = None
 
+        frame_style = frame_style or self.FRAME_STYLE
+
         self.init_ui(frame_style=frame_style, layout_cls=layout_cls, scrollable=scrollable)
 
     INNER_TEMPLATES: Iterable[NamedTemplate] = None
     LAYOUT_CLS = QVBoxLayout
+    FRAME_STYLE = None
 
     def init_ui(self, frame_style=None, layout_cls=None, scrollable=False):
         super().init_ui()
@@ -181,7 +195,7 @@ class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend import QApplication
+    from qtalos.backend.QtWidgets import QApplication
     from qtalos.widgets import *
 
 

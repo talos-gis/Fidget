@@ -13,7 +13,7 @@ from qtalos.backend.QtWidgets import QVBoxLayout, QStackedWidget, QComboBox, QFr
 from qtalos.core import ValueWidget, ParseError, ValueWidgetTemplate
 from qtalos.core.__util__ import first_valid
 
-from qtalos.widgets.widget_wrappers import MultiWidgetWrapper
+from qtalos.widgets.idiomatic_inner import MultiWidgetWrapper
 from qtalos.widgets.__util__ import only_valid
 
 T = TypeVar('T')

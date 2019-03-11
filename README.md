@@ -6,7 +6,7 @@ qTalos is an adapter of Qt into a functional-style interface. qTalos can be used
 Usage of qTalos is centered around the `ValueWidget` class. Simply put, a ValueWidget is a `QWidget` with a value. This value can then be read and used by parent widgets, or by the python program.
 
 ## Sample Usage
-```
+```python
 from typing import Tuple
 
 from qtalos.backend.QtWidgets import QLineEdit, QHBoxLayout, QApplication
@@ -61,35 +61,35 @@ if res != 0:
 <!-- todo add images -->
 
 Phew, a lot of this is standard `QWidget` usage, so we'll just go over the new bits:
-```
+```python
 class PointWidget(ValueWidget[Tuple[float, float]]):
 ```
 Every `ValueWidget` must extend the `ValueWidget` class (which extend the `QWidget` class). `ValueWidget` is a generic type, so it can be parametrized with its value type (in this case, a tuple of `int`s).
 
-```
+```python
 with self.setup_provided(layout):
 ```
 `ValueWidget` provides some additional widgets called provided widgets, that can be added to it to improve usability. These can range from a simple title label, a label that changes to indicate whether the UI's state is valid, or even a button that opens a complex dialog with multiple methods to import/export the value as plain text. The `setup_provided` method returns a convenience context manager that adds these provided widgets before or after the main UI. All these provided widgets can be disabled either with constant values in the inheriting class, or with arguments when the widget is created (`PointWidget('point', make_indicator=True, make_plaintext=True, make_title=True)`).
 
-```
+```python
 self.x_edit.textChanged.connect(self.change_value)
 self.y_edit.textChanged.connect(self.change_value)
 ```
 The `ValueWidget` must be notified for when its value changes due to its children's value changing. So its `change_value` slot must be connected to any such signal.
 
-```
+```python
 def parse(self):
 ```
 This is an abstract method that all `ValueWidget`s must implement. It processes the internal state of the widget's children, and returns a value (or raises a `ParseError`)
 
-```
+```python
 print(w.value())
 ```
 each `ValueWidget` has a value in store, that can be extracted and used as normal.
 
 This is all a lot of work, qTalos comes with many default implementations to make usage as effortless as possible:
 
-```
+```python
 from qtalos.backend.QtWidgets import QHBoxLayout
 from qtalos.widgets import IntEdit, TupleWidget
 
@@ -123,7 +123,7 @@ Printers and parsers can be added either by implementing the `ValueWidget`'s `pl
 
 ## Dual API
 As seen in the example, almost all of the parameters the `ValueWidget` can provided upon creation can also have a default value filled in by extending classes.
-```
+```python
 from qtalos.widgets import ValueCheckBox
 
 w = ValueCheckBox('title', ('YES', 'NO'), make_title=True)
@@ -138,6 +138,6 @@ w = ValueCheckBox('title', ('YES', 'NO'))
 qTalos comes with many builtin widgets to ease usage. Most usages will not have subclass 
 
 ## Compatibility
-qTalos can use both PyQt5 and PySide2. By default, it will try to import both wrappers, starting with PySide2, and will use the first it successfully imported. This can be changed with `qtalos.backend`'s function: `prefer`.
+qTalos can use either PyQt5 and PySide2. By default, it will try to import both wrappers, starting with PySide2, and will use the first it successfully imported. This can be changed with `qtalos.backend`'s function: `prefer`.
 
 Users of qTalos can also directly use whatever backend qTalos is using (thus ensuring compatibility) by importing Qt's members from `qtalos.backend` (currently, only imports from `QtWidgets` and `QtCore` are supported in this way)

@@ -8,7 +8,7 @@ from qtalos.backend.QtCore import Qt
 from qtalos.core import ValueWidget, ValueWidgetTemplate, ParseError
 from qtalos.core.__util__ import first_valid
 
-from qtalos.widgets.widget_wrappers import SingleWidgetWrapper
+from qtalos.widgets.idiomatic_inner import SingleWidgetWrapper
 from qtalos.widgets.__util__ import only_valid
 
 T = TypeVar('T')
