@@ -6,7 +6,7 @@ setuptools.setup(
     name=qtalos.__name__,
     version=qtalos.__version__,
     author=qtalos.__author__,
-    packages=['qtalos', 'qtalos.widgets', 'qtalos.backends'],
+    packages=['qtalos', 'qtalos.widgets', 'qtalos.backend'],
     extras_require={
         'PyQt': ['PyQt5'],
         'PySide': ['PySide']

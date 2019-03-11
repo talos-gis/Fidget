@@ -1,5 +1,6 @@
 from qtalos.widgets.checkbox import ValueCheckBox
 from qtalos.widgets.combo import ValueCombo
+from qtalos.widgets.confirmer import ConfirmValueWidget
 from qtalos.widgets.converter import ConverterWidget
 from qtalos.widgets.dict import DictWidget
 from qtalos.widgets.edit_combo import ValueEditCombo

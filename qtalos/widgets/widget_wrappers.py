@@ -1,6 +1,6 @@
 from typing import TypeVar, Generic, Iterable
 
-from qtalos import ValueWidget, ValueWidgetTemplate
+from qtalos.core import ValueWidget, ValueWidgetTemplate
 
 from qtalos.widgets.idiomatic_inner import get_idiomatic_inner_template
 

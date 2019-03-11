@@ -1,8 +1,8 @@
 from typing import TypeVar, Generic, Tuple, Union
 
-from qtalos.backend import QLabel, QHBoxLayout
+from qtalos.backend.QtWidgets import QLabel, QHBoxLayout
 
-from qtalos import ValueWidget, InnerPlaintextParser, PlaintextParseError, PlaintextPrintError
+from qtalos.core import ValueWidget, InnerPlaintextParser, PlaintextParseError, PlaintextPrintError
 
 T = TypeVar('T')
 

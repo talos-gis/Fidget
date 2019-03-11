@@ -2,9 +2,9 @@ from typing import Optional, Pattern, Union
 
 import re
 
-from qtalos.backend import QLineEdit, QHBoxLayout
+from qtalos.backend.QtWidgets import QLineEdit, QHBoxLayout
 
-from qtalos import ValueWidget, InnerPlaintextParser, ValidationError
+from qtalos.core import ValueWidget, InnerPlaintextParser, ValidationError
 
 
 class LineEdit(ValueWidget[str]):

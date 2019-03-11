@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TypeVar, Generic, Callable, Optional
 
 from functools import wraps
-from qtalos.backend import QHBoxLayout
+from qtalos.backend.QtWidgets import QHBoxLayout
 
-from qtalos import ValueWidget, ParseError, PlaintextParseError, ValueWidgetTemplate
+from qtalos.core import ValueWidget, ParseError, PlaintextParseError, ValueWidgetTemplate
 
 from qtalos.widgets.widget_wrappers import SingleWidgetWrapper
 from qtalos.widgets.__util__ import is_trivial_printer, only_valid
@@ -146,13 +146,17 @@ class ConverterWidget(Generic[F, T], SingleWidgetWrapper[F, T]):
 class ConverterWidgetTemplate(Generic[T], ValueWidgetTemplate[T]):
     @property
     def title(self):
-        if self.args:
-            inner = self.args[0]
-            try:
-                return inner.title
-            except AttributeError:
-                pass
+        it = self._inner_template()
+        if it:
+            return it.title
         return super().title
+
+    def _inner_template(self):
+        if self.widget_cls.INNER_TEMPLATE:
+            return self.widget_cls.INNER_TEMPLATE
+        if self.args:
+            return self.args[0].template_of()
+        return None
 
 
 if __name__ == '__main__':
