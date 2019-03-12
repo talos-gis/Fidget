@@ -1,6 +1,6 @@
-from qtalos.backend.QtWidgets import QApplication, QHBoxLayout, QFrame
+from fidget.backend.QtWidgets import QApplication, QHBoxLayout, QFrame
 
-from qtalos.widgets import ValueCheckBox, ValueCombo, IntEdit, StackedValueWidget
+from fidget.widgets import ValueCheckBox, ValueCombo, IntEdit, StackedValueWidget
 
 if __name__ == '__main__':
 

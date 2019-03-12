@@ -4,14 +4,14 @@ from typing import Type, Iterable, Tuple, Union, TypeVar, Sequence, Any
 import json
 from itertools import chain
 
-from qtalos.backend.QtWidgets import QVBoxLayout, QFrame, QBoxLayout
+from fidget.backend.QtWidgets import QVBoxLayout, QFrame, QBoxLayout
 
-from qtalos.core import ValueWidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
+from fidget.core import ValueWidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
     PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
-from qtalos.core.__util__ import first_valid
+from fidget.core.__util__ import first_valid
 
-from qtalos.widgets.idiomatic_inner import MultiWidgetWrapper
-from qtalos.widgets.__util__ import only_valid
+from fidget.widgets.idiomatic_inner import MultiWidgetWrapper
+from fidget.widgets.__util__ import only_valid
 
 T = TypeVar('T')
 Template = Union[
@@ -144,8 +144,8 @@ class TupleWidget(MultiWidgetWrapper[Any, Tuple]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend import QApplication, QHBoxLayout
-    from qtalos.widgets import IntEdit
+    from fidget.backend import QApplication, QHBoxLayout
+    from fidget.widgets import IntEdit
 
 
     class PointWidget(TupleWidget):

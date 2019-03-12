@@ -1,8 +1,8 @@
 from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List, Callable
 
-from qtalos.backend.QtWidgets import QComboBox, QHBoxLayout
+from fidget.backend.QtWidgets import QComboBox, QHBoxLayout
 
-from qtalos.core import ValueWidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
+from fidget.core import ValueWidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
 
 T = TypeVar('T')
 
@@ -138,8 +138,8 @@ class ValueEditCombo(Generic[T], ValueWidget[T]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend.QtWidgets import QApplication
-    from qtalos.core import wrap_parser
+    from fidget.backend.QtWidgets import QApplication
+    from fidget.core import wrap_parser
 
     app = QApplication([])
     w = ValueEditCombo('sample',

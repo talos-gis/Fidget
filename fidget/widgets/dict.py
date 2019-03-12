@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import Union, Mapping, Iterable, Tuple, TypeVar, Dict, Type, Any
 import json
 
-from qtalos.backend.QtWidgets import QVBoxLayout, QFrame, QScrollArea, QWidget, QBoxLayout
+from fidget.backend.QtWidgets import QVBoxLayout, QFrame, QScrollArea, QWidget, QBoxLayout
 
-from qtalos.core import ValueWidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
+from fidget.core import ValueWidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
     PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
-from qtalos.core.__util__ import first_valid
+from fidget.core.__util__ import first_valid
 
-from qtalos.widgets.idiomatic_inner import MultiWidgetWrapper
-from qtalos.widgets.__util__ import only_valid
+from fidget.widgets.idiomatic_inner import MultiWidgetWrapper
+from fidget.widgets.__util__ import only_valid
 
 T = TypeVar('T')
 NamedTemplate = Union[
@@ -195,8 +195,8 @@ class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend.QtWidgets import QApplication
-    from qtalos.widgets import *
+    from fidget.backend.QtWidgets import QApplication
+    from fidget.widgets import *
 
 
     class PointWidget(DictWidget):

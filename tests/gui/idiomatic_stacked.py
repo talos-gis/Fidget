@@ -1,6 +1,6 @@
-from qtalos.backend import QHBoxLayout
+from fidget.backend import QHBoxLayout
 
-from qtalos.widgets import ValueCombo, inner_widget, StackedValueWidget, LabelValueWidget, IntEdit
+from fidget.widgets import ValueCombo, inner_widget, StackedValueWidget, LabelValueWidget, IntEdit
 
 from tests.gui.__util__ import test_as_main
 

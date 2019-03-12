@@ -2,11 +2,11 @@ from typing import Optional, Pattern, Union
 
 import re
 
-from qtalos.backend.QtWidgets import QLineEdit, QHBoxLayout
+from fidget.backend.QtWidgets import QLineEdit, QHBoxLayout
 
-from qtalos.core import ValueWidget, inner_plaintext_parser, ValidationError
+from fidget.core import ValueWidget, inner_plaintext_parser, ValidationError
 
-from qtalos.widgets.__util__ import optional_valid
+from fidget.widgets.__util__ import optional_valid
 
 
 class LineEdit(ValueWidget[str]):
@@ -63,7 +63,7 @@ class LineEdit(ValueWidget[str]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend.QtWidgets import QApplication
+    from fidget.backend.QtWidgets import QApplication
 
     app = QApplication([])
     w = LineEdit('sample', pattern='(a[^a]*a|[^a])*', make_plaintext=True)

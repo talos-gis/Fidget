@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Type
 
-from qtalos.backend import load
+from fidget.backend import load
 
 if TYPE_CHECKING:
     import PyQt5.QtWidgets

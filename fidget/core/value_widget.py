@@ -8,14 +8,14 @@ from pathlib import Path
 from functools import partial, wraps
 from itertools import chain
 
-from qtalos.backend.QtWidgets import QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
+from fidget.backend.QtWidgets import QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
     QMessageBox, QFileDialog, QGroupBox, QGridLayout
-from qtalos.backend.QtCore import Qt, pyqtSignal, __backend__
+from fidget.backend.QtCore import Qt, pyqtSignal, __backend__
 
-from qtalos.core.plaintext_adapter import PlaintextParseError, PlaintextPrintError, \
+from fidget.core.plaintext_adapter import PlaintextParseError, PlaintextPrintError, \
     join_parsers, join_printers, PlaintextParser, PlaintextPrinter
-from qtalos.core.parsed_value import ParsedValue, ParseError, ValidationError
-from qtalos.core.__util__ import error_details, error_tooltip, first_valid
+from fidget.core.parsed_value import ParsedValue, ParseError, ValidationError
+from fidget.core.__util__ import error_details, error_tooltip, first_valid
 
 T = TypeVar('T')
 

@@ -1,5 +1,5 @@
-from qtalos.core.parsed_value import ParseError, ValidationError
-from qtalos.core.__util__ import exc_wrap
+from fidget.core.parsed_value import ParseError, ValidationError
+from fidget.core.__util__ import exc_wrap
 
 wrap_parser = exc_wrap(ParseError)
 wrap_validator = exc_wrap(ValidationError)

@@ -1,6 +1,6 @@
 from typing import TypeVar, Generic, Iterable
 
-from qtalos.core import ValueWidget, ValueWidgetTemplate
+from fidget.core import ValueWidget, ValueWidgetTemplate
 
 """
 Idiomatic inner widgets are ValidWidget classes defined with the inner_widget decorator inside of wrapper ValidWidget

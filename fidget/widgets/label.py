@@ -1,8 +1,8 @@
 from typing import TypeVar, Generic, Tuple, Union
 
-from qtalos.backend.QtWidgets import QLabel, QHBoxLayout
+from fidget.backend.QtWidgets import QLabel, QHBoxLayout
 
-from qtalos.core import ValueWidget, inner_plaintext_parser, PlaintextParseError, PlaintextPrintError
+from fidget.core import ValueWidget, inner_plaintext_parser, PlaintextParseError, PlaintextPrintError
 
 T = TypeVar('T')
 
@@ -83,7 +83,7 @@ class LabelValueWidget(Generic[T], ValueWidget[T]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend import QApplication
+    from fidget.backend import QApplication
 
     app = QApplication([])
     w = LabelValueWidget('sample', ('Hi', 1245))

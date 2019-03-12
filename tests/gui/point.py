@@ -1,8 +1,8 @@
 from typing import Tuple, Match
 
-from qtalos.backend.QtWidgets import QLineEdit, QHBoxLayout
+from fidget.backend.QtWidgets import QLineEdit, QHBoxLayout
 
-from qtalos.core import ValueWidget, regex_parser, json_parser, PlaintextParseError, ParseError, wrap_plaintext_parser
+from fidget.core import ValueWidget, regex_parser, json_parser, PlaintextParseError, ParseError, wrap_plaintext_parser
 
 from tests.gui.__util__ import test_as_main
 

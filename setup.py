@@ -1,12 +1,12 @@
 import setuptools
 
-import qtalos
+import fidget
 
 setuptools.setup(
-    name=qtalos.__name__,
-    version=qtalos.__version__,
-    author=qtalos.__author__,
-    packages=['qtalos', 'qtalos.widgets', 'qtalos.backend'],
+    name=fidget.__name__,
+    version=fidget.__version__,
+    author=fidget.__author__,
+    packages=['fidget', 'fidget.widgets', 'fidget.backend'],
     extras_require={
         'PyQt': ['PyQt5'],
         'PySide': ['PySide']

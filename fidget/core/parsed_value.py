@@ -5,7 +5,7 @@ from typing import Generic, TypeVar, Union
 from dataclasses import dataclass
 from enum import IntEnum
 
-from qtalos.core.__util__ import error_details
+from fidget.core.__util__ import error_details
 
 T = TypeVar('T')
 

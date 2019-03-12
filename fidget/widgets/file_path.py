@@ -3,12 +3,12 @@ from typing import Optional, Dict, Union, Callable, Any
 from pathlib import Path
 from glob import iglob
 
-from qtalos.backend.QtWidgets import QHBoxLayout, QLineEdit, QFileDialog, QPushButton
+from fidget.backend.QtWidgets import QHBoxLayout, QLineEdit, QFileDialog, QPushButton
 
-from qtalos.core import ValueWidget, ValidationError, PlaintextParseError
-from qtalos.core.__util__ import first_valid
+from fidget.core import ValueWidget, ValidationError, PlaintextParseError
+from fidget.core.__util__ import first_valid
 
-from qtalos.widgets.__util__ import filename_valid
+from fidget.widgets.__util__ import filename_valid
 
 
 def glob_search(pattern):
@@ -128,7 +128,7 @@ class FilePathWidget(ValueWidget[Path]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend import QApplication
+    from fidget.backend import QApplication
 
     app = QApplication([])
     w = FilePathWidget('sample', make_title=True, make_plaintext=True)

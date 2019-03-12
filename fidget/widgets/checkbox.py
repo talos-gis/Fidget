@@ -1,8 +1,8 @@
 from typing import TypeVar, Generic, Tuple, Union, Mapping
 
-from qtalos.backend.QtWidgets import QCheckBox, QHBoxLayout
+from fidget.backend.QtWidgets import QCheckBox, QHBoxLayout
 
-from qtalos.core import ValueWidget, inner_plaintext_parser, PlaintextPrintError, PlaintextParseError
+from fidget.core import ValueWidget, inner_plaintext_parser, PlaintextPrintError, PlaintextParseError
 
 T = TypeVar('T')
 
@@ -87,7 +87,7 @@ class ValueCheckBox(Generic[T], ValueWidget[T]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend.QtWidgets import QApplication
+    from fidget.backend.QtWidgets import QApplication
     from enum import Enum, auto
 
 

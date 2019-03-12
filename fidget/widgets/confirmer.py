@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import TypeVar, Generic, Union, NoReturn, Callable, Type
 
-from qtalos.backend.QtWidgets import QHBoxLayout, QApplication, QPushButton, QVBoxLayout, QBoxLayout, QMessageBox
-from qtalos.backend.QtCore import Qt
+from fidget.backend.QtWidgets import QHBoxLayout, QApplication, QPushButton, QVBoxLayout, QBoxLayout, QMessageBox
+from fidget.backend.QtCore import Qt
 
-from qtalos.core import ValueWidget, ValueWidgetTemplate, ParseError
-from qtalos.core.__util__ import first_valid
+from fidget.core import ValueWidget, ValueWidgetTemplate, ParseError
+from fidget.core.__util__ import first_valid
 
-from qtalos.widgets.idiomatic_inner import SingleWidgetWrapper
-from qtalos.widgets.__util__ import only_valid
+from fidget.widgets.idiomatic_inner import SingleWidgetWrapper
+from fidget.widgets.__util__ import only_valid
 
 T = TypeVar('T')
 C = TypeVar('C')
@@ -178,7 +178,7 @@ def ask(*args, **kwargs) -> \
 
 
 if __name__ == '__main__':
-    from qtalos.widgets import *
+    from fidget.widgets import *
 
     app = QApplication([])
 

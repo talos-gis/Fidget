@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import TypeVar, Generic, Callable, Optional
 
 from functools import wraps
-from qtalos.backend.QtWidgets import QHBoxLayout
+from fidget.backend.QtWidgets import QHBoxLayout
 
-from qtalos.core import ValueWidget, ParseError, PlaintextParseError, ValueWidgetTemplate
+from fidget.core import ValueWidget, ParseError, PlaintextParseError, ValueWidgetTemplate
 
-from qtalos.widgets.idiomatic_inner import SingleWidgetWrapper
-from qtalos.widgets.__util__ import is_trivial_printer, only_valid
+from fidget.widgets.idiomatic_inner import SingleWidgetWrapper
+from fidget.widgets.__util__ import is_trivial_printer, only_valid
 
 T = TypeVar('T')
 F = TypeVar('F')
@@ -173,9 +173,9 @@ class ConverterWidgetTemplate(Generic[T], ValueWidgetTemplate[T]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend import QApplication
-    from qtalos import wrap_parser
-    from qtalos.widgets import LineEdit, OptionalValueWidget
+    from fidget.backend import QApplication
+    from fidget import wrap_parser
+    from fidget.widgets import LineEdit, OptionalValueWidget
 
     app = QApplication([])
     w = ConverterWidget(LineEdit('sample', pattern='(1[^1]*1|[^1])*', make_plaintext=True),

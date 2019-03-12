@@ -2,7 +2,7 @@ from typing import Dict, Union, Optional
 
 from warnings import warn
 
-from qtalos.backend.qtbackend import QtBackend, PyQt5_backend, PySide2_backend
+from fidget.backend.qtbackend import QtBackend, PyQt5_backend, PySide2_backend
 
 priority: Optional[QtBackend] = None
 fail_ok = True
@@ -16,13 +16,13 @@ def prefer(backend: Union[QtBackend, str], try_all=False):
     """
     Set a preference for a backend to use.
     :param backend: the backend to attempt to import first.
-     See "qtalos.backend.preference.backends" for a full list of available backends.
+     See "fidget.backend.preference.backends" for a full list of available backends.
     :param try_all: whether to try other backends if the preferred backend fails
     """
     global priority, fail_ok
 
     if loaded:
-        warn('a backend was already loaded (call prefer before importing other qtalos packages)')
+        warn('a backend was already loaded (call prefer before importing other fidget packages)')
 
     if priority:
         warn('a previous priority backend was already set')

@@ -2,12 +2,12 @@ from typing import Callable, TypeVar, Generic, Type, Union
 
 from functools import partial
 
-from qtalos.core import format_printer, regex_parser, PlaintextParseError, wrap_plaintext_parser, ValueWidget, \
+from fidget.core import format_printer, regex_parser, PlaintextParseError, wrap_plaintext_parser, ValueWidget, \
     ValueWidgetTemplate, inner_plaintext_parser, ParseError
 
-from qtalos.widgets.line import LineEdit
-from qtalos.widgets.converter import ConverterWidget
-from qtalos.widgets.confirmer import ConfirmValueWidget
+from fidget.widgets.line import LineEdit
+from fidget.widgets.converter import ConverterWidget
+from fidget.widgets.confirmer import ConfirmValueWidget
 
 T = TypeVar('T')
 
@@ -108,7 +108,7 @@ def template(*args, **kwargs):
 
 
 if __name__ == '__main__':
-    from qtalos.backend.QtWidgets import QApplication
+    from fidget.backend.QtWidgets import QApplication
 
     app = QApplication([])
     w = IntEdit('sample', make_plaintext=True, make_indicator=True)

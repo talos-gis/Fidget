@@ -5,14 +5,14 @@ from typing import TypeVar, Generic, Union
 from itertools import chain
 from functools import wraps, partial
 
-from qtalos.backend.QtWidgets import QCheckBox, QHBoxLayout, QWidget, QApplication
-from qtalos.backend.QtCore import QObject, QEvent, __backend__
+from fidget.backend.QtWidgets import QCheckBox, QHBoxLayout, QWidget, QApplication
+from fidget.backend.QtCore import QObject, QEvent, __backend__
 
-from qtalos.core import ValueWidget, PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate
-from qtalos.core.__util__ import first_valid
+from fidget.core import ValueWidget, PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate
+from fidget.core.__util__ import first_valid
 
-from qtalos.widgets.idiomatic_inner import SingleWidgetWrapper
-from qtalos.widgets.__util__ import only_valid
+from fidget.widgets.idiomatic_inner import SingleWidgetWrapper
+from fidget.widgets.__util__ import only_valid
 
 if __backend__.__name__ == 'PySide2':
     import shiboken2
@@ -184,7 +184,7 @@ class OptionalTemplate(Generic[T], ValueWidgetTemplate[T]):
 
 
 if __name__ == '__main__':
-    from qtalos.widgets import *
+    from fidget.widgets import *
 
     app = QApplication([])
     w = OptionalValueWidget(

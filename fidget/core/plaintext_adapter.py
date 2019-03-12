@@ -4,7 +4,7 @@ import re
 import json
 from functools import wraps, update_wrapper
 
-from qtalos.core.__util__ import exc_wrap
+from fidget.core.__util__ import exc_wrap
 
 T = TypeVar('T')
 

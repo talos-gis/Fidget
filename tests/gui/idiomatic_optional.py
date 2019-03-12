@@ -1,4 +1,4 @@
-from qtalos.widgets import OptionalValueWidget, ValueCombo, inner_widget
+from fidget.widgets import OptionalValueWidget, ValueCombo, inner_widget
 
 from tests.gui.__util__ import test_as_main
 

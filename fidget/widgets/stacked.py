@@ -7,14 +7,14 @@ from functools import partial
 from abc import abstractmethod
 from itertools import chain
 
-from qtalos.backend.QtWidgets import QVBoxLayout, QStackedWidget, QComboBox, QFrame, QRadioButton, QGroupBox, \
+from fidget.backend.QtWidgets import QVBoxLayout, QStackedWidget, QComboBox, QFrame, QRadioButton, QGroupBox, \
     QCheckBox, QBoxLayout
 
-from qtalos.core import ValueWidget, ParseError, ValueWidgetTemplate
-from qtalos.core.__util__ import first_valid
+from fidget.core import ValueWidget, ParseError, ValueWidgetTemplate
+from fidget.core.__util__ import first_valid
 
-from qtalos.widgets.idiomatic_inner import MultiWidgetWrapper
-from qtalos.widgets.__util__ import only_valid
+from fidget.widgets.idiomatic_inner import MultiWidgetWrapper
+from fidget.widgets.__util__ import only_valid
 
 T = TypeVar('T')
 NamedTemplate = Union[

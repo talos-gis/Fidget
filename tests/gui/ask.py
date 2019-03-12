@@ -1,4 +1,4 @@
-from qtalos.widgets import ask, FloatEdit, template
+from fidget.widgets import ask, FloatEdit, template
 
 from tests.gui.__util__ import test_as_main
 

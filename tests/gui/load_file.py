@@ -1,7 +1,7 @@
-from qtalos.backend import prefer
+from fidget.backend import prefer
 
-from qtalos.backend import QWidget, QStackedWidget, QFileDialog
-from qtalos.widgets import StackedValueWidget, FilePathWidget, inner_widget, ConverterWidget, DictWidget, LineEdit
+from fidget.backend import QWidget, QStackedWidget, QFileDialog
+from fidget.widgets import StackedValueWidget, FilePathWidget, inner_widget, ConverterWidget, DictWidget, LineEdit
 
 
 class MakeProjectWidget(StackedValueWidget):

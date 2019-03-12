@@ -1,8 +1,8 @@
 from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List
 
-from qtalos.backend.QtWidgets import QComboBox, QHBoxLayout
+from fidget.backend.QtWidgets import QComboBox, QHBoxLayout
 
-from qtalos.core import ValueWidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
+from fidget.core import ValueWidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
 
 T = TypeVar('T')
 
@@ -113,7 +113,7 @@ class ValueCombo(Generic[T], ValueWidget[T]):
 
 
 if __name__ == '__main__':
-    from qtalos.backend import QApplication
+    from fidget.backend import QApplication
     from enum import Enum, auto
 
 

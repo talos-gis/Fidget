@@ -1,5 +1,5 @@
-from qtalos.backend.QtWidgets import QHBoxLayout
-from qtalos.widgets import IntEdit, TupleWidget
+from fidget.backend.QtWidgets import QHBoxLayout
+from fidget.widgets import IntEdit, TupleWidget
 
 from tests.gui.__util__ import test_as_main
 

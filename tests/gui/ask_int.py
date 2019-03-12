@@ -1,4 +1,4 @@
-from qtalos.widgets import IntEdit, ConfirmValueWidget, inner_widget
+from fidget.widgets import IntEdit, ConfirmValueWidget, inner_widget
 
 from tests.gui.__util__ import test_as_main
 
