@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from typing import TypeVar, Generic, Union, NoReturn, Callable, Type
+from typing import TypeVar, Generic, Union, NoReturn, Callable
 
-from fidget.backend.QtWidgets import QHBoxLayout, QApplication, QPushButton, QVBoxLayout, QBoxLayout, QMessageBox
-from fidget.backend.QtCore import Qt
+from fidget.backend.QtWidgets import QHBoxLayout, QApplication, QPushButton, QVBoxLayout, QBoxLayout, QMessageBox, \
+    QWidget
+from fidget.backend.QtCore import Qt, QEventLoop
 
-from fidget.core import Fidget, FidgetTemplate, ParseError
+from fidget.core import Fidget, FidgetTemplate, ParseError, TemplateLike
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.idiomatic_inner import SingleFidgetWrapper
-from fidget.widgets.__util__ import only_valid
+from fidget.widgets.__util__ import only_valid, optional_valid
 
 T = TypeVar('T')
 C = TypeVar('C')
@@ -17,14 +18,16 @@ C = TypeVar('C')
 
 class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
     """
-    A ValueWidget that wraps another ValueWidget. Adding an Ok and (potentially) Cancel buttons, that trigger this
-    ValueWidget's validation. Useful for dialogs or for slow validations
+    A Fidget that wraps another Fidget. Adding an Ok and (potentially) Cancel buttons, that trigger this
+    Fidget's validation. Useful for dialogs or for slow validations
     """
     NO_CANCEL: NoReturn = object()
 
-    def __init__(self, inner_template: FidgetTemplate[T] = None, layout_cls=None,
+    # todo document pre and post widgets
+    def __init__(self, inner_template: TemplateLike[T] = None, layout_cls=None,
                  cancel_value: C = NO_CANCEL, close_on_confirm=None, ok_text=None, cancel_text=None,
-                 **kwargs):
+                 window_modality=None, pre_widget: Union[QWidget, Callable[[], QWidget]] = None,
+                 post_widget: Union[QWidget, Callable[[], QWidget]] = None, **kwargs):
         """
         :param inner_template: an inner template to wrap
         :param layout_cls: the class of the layout
@@ -33,7 +36,8 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
         :param close_on_confirm: whether to close this widget if Ok or Cancel is clicked and the value is valid.
         :param ok_text: text for the ok button
         :param cancel_text: text for the cancel button
-        :param kwargs: forwarded to ValueWidget
+        :param window_modality: the modality of the widget, convenience parameter
+        :param kwargs: forwarded to Fidget
         """
         inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
 
@@ -51,7 +55,8 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
 
         self.close_on_confirm = first_valid(close_on_confirm=close_on_confirm, CLOSE_ON_CONFIRM=self.CLOSE_ON_CONFIRM)
 
-        self.init_ui(layout_cls, ok_text=ok_text, cancel_text=cancel_text)
+        self.init_ui(layout_cls=layout_cls, ok_text=ok_text, cancel_text=cancel_text, modality=window_modality,
+                     pre_widget=pre_widget, post_widget=post_widget)
 
         self._inner_changed()
 
@@ -59,18 +64,27 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
     LAYOUT_CLS = QVBoxLayout
     MAKE_TITLE = MAKE_PLAINTEXT = MAKE_INDICATOR = False
     CLOSE_ON_CONFIRM = False
-    OK_TEXT = 'Ok'
+    WINDOW_MODALITY = None
+    OK_TEXT = 'OK'
     CANCEL_TEXT = 'Cancel'
+    PRE_WIDGET = None
+    POST_WIDGET = None
 
-    def init_ui(self, layout_cls=None, ok_text=None, cancel_text=None):
+    def init_ui(self, layout_cls=None, ok_text=None, cancel_text=None, modality=None,
+                pre_widget=None, post_widget=None):
         super().init_ui()
         layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
+        modality = modality or self.WINDOW_MODALITY
 
         layout: QBoxLayout = layout_cls(self)
 
         self.inner = self.inner_template()
 
         with self.setup_provided(layout):
+            pre_widget = self.to_widget(optional_valid(pre_widget=pre_widget, PRE_WIDGET=self.PRE_WIDGET))
+            if pre_widget:
+                layout.addWidget(pre_widget)
+
             self.inner.on_change.connect(self._inner_changed)
 
             layout.addWidget(self.inner)
@@ -87,17 +101,32 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
 
             layout.addLayout(btn_layout)
 
+            post_widget = self.to_widget(optional_valid(post_widget=post_widget, POST_WIDGET=self.POST_WIDGET))
+            if post_widget:
+                layout.addWidget(post_widget)
+
+        self.setFocusProxy(self.inner)
+
+        if modality:
+            self.setWindowModality(modality)
+
     def parse(self):
         if self.cancel_flag:
             return self.cancel_value
         inner_value = self.inner.value()
         if not inner_value.is_ok():
-            raise ParseError(offender=self.inner) from inner_value.value
+            raise ParseError(offender=self.inner) from inner_value.exception
         return inner_value.value
 
+    @staticmethod
+    def to_widget(w: Union[QWidget, Callable[[], QWidget], None]):
+        if not w or isinstance(w, QWidget):
+            return w
+        return w()
+
     def _inner_changed(self):
-        state = self.inner.value().value_state
-        self.ok_button.setEnabled(state.is_ok())
+        value = self.inner.value()
+        self.ok_button.setEnabled(value.is_ok())
 
     def _ok_btn_clicked(self, *a):
         self.cancel_flag = False
@@ -135,45 +164,45 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
         super().closeEvent(event)
 
 
-# todo common superclass
-
-@FidgetConfirmer.template_class
-class ConfirmTemplate(Generic[T], FidgetTemplate[T]):
-    @property
-    def title(self):
-        it = self._inner_template()
-        if it:
-            return it.title
-        return super().title
-
-    def _inner_template(self):
-        if self.widget_cls.INNER_TEMPLATE:
-            return self.widget_cls.INNER_TEMPLATE
-        if self.args:
-            return self.args[0].template_of()
-        return None
-
-
-def ask(*args, **kwargs) -> \
-        Callable[[Union[Type[Fidget[T]], Fidget[T], FidgetTemplate[T]]], FidgetTemplate[T]]:
+class FidgetQuestion(Generic[T, C], FidgetConfirmer[T, C]):
     """
-    wrap a ValueWidget in a ConfirmValueWidget
-    :param args: forwarded to ConfirmValueWidget
-    :param kwargs: forwarded to ConfirmValueWidget
-    :return: a ConfirmValueWidget template
+    A specialization of FidgetConfirmer designed for dialogs
     """
-    kwargs.setdefault('close_on_confirm', True)
-    kwargs.setdefault('flags', Qt.Dialog)
+    CLOSE_ON_CONFIRM = True
+    FLAGS = Qt.Dialog
+    WINDOW_MODALITY = Qt.WindowModal
 
-    def ret(c: Union[Type[Fidget[T]], Fidget[T], FidgetTemplate[T]]) -> FidgetTemplate[T]:
-        if isinstance(c, type) and issubclass(c, Fidget):
+    def exec(self):
+        """
+        show the widget and block until its value is set
+        """
+        self.show()
+        event_loop = QEventLoop()
+        self.on_change.connect(event_loop.quit)
+        event_loop.exec_()
+        return self.value()
+
+    exec_ = exec
+
+
+def question(*args, **kwargs) -> \
+        Callable[[TemplateLike[T]], FidgetTemplate[T]]:
+    """
+    decorator to wrap a Fidget template in a FidgetQuestion template
+    :param args: forwarded to ConfirmFidget
+    :param kwargs: forwarded to FidgetConfirmer
+    :return: a FidgetConfirmer template
+    """
+
+    def ret(c: TemplateLike[T]) -> FidgetTemplate[T]:
+        if isinstance(c, type) and issubclass(c, TemplateLike):
             template_of = c.template()
-        elif isinstance(c, (Fidget, FidgetTemplate)):
+        elif isinstance(c, TemplateLike):
             template_of = c.template_of()
         else:
             raise TypeError(f'cannot wrap {c} in ask')
 
-        return FidgetConfirmer.template(template_of, *args, **kwargs)
+        return FidgetQuestion.template(template_of, *args, **kwargs)
 
     return ret
 

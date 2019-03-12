@@ -21,7 +21,7 @@ class FidgetCombo(Generic[T], Fidget[T]):
         :param options: an iterable of options: either bare values or str-value tuples
         :param default_index: the default index of the ComboBox, ignored if a valid DefaultValue is provided
         :param default_value: the default value of the widget
-        :param kwargs: forwarded to ValueWidget
+        :param kwargs: forwarded to Fidget
         """
         super().__init__(title, **kwargs)
         self.default_index = default_index

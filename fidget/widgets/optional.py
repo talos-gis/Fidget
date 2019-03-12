@@ -23,7 +23,7 @@ C = TypeVar('C')
 
 class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
     """
-    A ValueWidget wrapper that allows an inner ValueWidget to be disabled, setting the value to None or another singleton
+    A Fidget wrapper that allows an inner Fidget to be disabled, setting the value to None or another singleton
     """
     singleton_names = {
         None: frozenset(['none']),
@@ -62,7 +62,7 @@ class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
         :param default_state: whether the default value of the widget will be enabled
         :param layout_cls: the layout class
         :param none_value: the value to set when the widget is disabled
-        :param kwargs: forwarded to ValueWidget
+        :param kwargs: forwarded to Fidget
         """
 
         inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
@@ -164,23 +164,6 @@ class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
         enable = new_state != 0
         self.inner.setEnabled(enable)
         self.change_value()
-
-
-@FidgetOptional.template_class
-class OptionalTemplate(Generic[T], FidgetTemplate[T]):
-    @property
-    def title(self):
-        it = self._inner_template()
-        if it:
-            return it.title
-        return super().title
-
-    def _inner_template(self):
-        if self.widget_cls.INNER_TEMPLATE:
-            return self.widget_cls.INNER_TEMPLATE
-        if self.args:
-            return self.args[0].template_of()
-        return None
 
 
 if __name__ == '__main__':

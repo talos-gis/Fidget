@@ -16,7 +16,7 @@ F = TypeVar('F')
 
 class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
     """
-    A ValueWidget wrapper that only converts the value to another type
+    A Fidget wrapper that only converts the value to another type
     """
     def __init__(self, inner_template: FidgetTemplate[F] = None,
                  converter_func: Callable[[F], T] = None,
@@ -26,7 +26,7 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
         :param inner_template: the template to wrap
         :param converter_func: a conversion function
         :param back_converter_func: a backwards conversion function
-        :param kwargs: forwarded to either the inner template or ValueWidget
+        :param kwargs: forwarded to either the inner template or Fidget
         """
 
         inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
@@ -65,6 +65,8 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
 
         if self.inner.title_label:
             self.make_title = True
+            self.title_label.linkActivated.disconnect(self.inner._help_clicked)
+            self.title_label.linkActivated.connect(self._help_clicked)
 
         if self.inner.auto_button:
             self.inner.auto_button.clicked.disconnect(self.inner._auto_btn_click)
@@ -74,11 +76,15 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
         if self.inner.plaintext_button:
             self.inner.plaintext_button.clicked.disconnect(self.inner._plaintext_btn_click)
             self.inner.plaintext_button.clicked.connect(self._plaintext_btn_click)
+
             self._plaintext_widget = self.inner._plaintext_widget
+            self._plaintext_widget.owner = self
+
             self.make_plaintext = True
 
         if self.inner.indicator_label:
-            self.inner.indicator_label.mousePressEvent = self._detail_button_clicked
+            self.title_label.linkActivated.disconnect(self.inner._detail_button_clicked)
+            self.title_label.linkActivated.connect(self._detail_button_clicked)
             self.indicator_label = self.inner.indicator_label
             self.make_indicator = True
 
@@ -118,7 +124,7 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
                 try:
                     return self.convert(f)
                 except ParseError as e:
-                    raise PlaintextParseError() from e
+                    raise PlaintextParseError from e
 
             yield p
 
@@ -140,7 +146,6 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
 
     def _fill(self, v: T):
         f = self.back_convert(v)
-        # todo if the back_converter fails, just fill the initial value
         self.inner.fill(f)
 
     @property
@@ -154,23 +159,6 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
             if key in self.inner_template.kwargs:
                 template_args[key] = self.inner_template.kwargs[key]
         return ret.template(**template_args)
-
-
-@FidgetConverter.template_class
-class ConverterWidgetTemplate(Generic[T], FidgetTemplate[T]):
-    @property
-    def title(self):
-        it = self._inner_template()
-        if it:
-            return it.title
-        return super().title
-
-    def _inner_template(self):
-        if self.widget_cls.INNER_TEMPLATE:
-            return self.widget_cls.INNER_TEMPLATE
-        if self.args:
-            return self.args[0].template_of()
-        return None
 
 
 if __name__ == '__main__':

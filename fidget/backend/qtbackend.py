@@ -55,7 +55,7 @@ class NamePrefixQtBackend(QtBackend):
         self.__name__ = name
 
     def load(self):
-        for submodule in ['', 'QtWidgets', 'QtCore']:
+        for submodule in ['', 'QtWidgets', 'QtCore', 'QtGui']:
             self.load_module(submodule)
 
     def load_module(self, sub_name):

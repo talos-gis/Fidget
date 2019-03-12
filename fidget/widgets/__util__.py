@@ -5,6 +5,9 @@ from typing import TypeVar, Optional
 from pathlib import Path
 import os
 
+from fidget.backend.QtWidgets import QLabel
+from fidget.backend.QtCore import Qt
+
 T = TypeVar('T')
 
 win_illegal_chars = frozenset(r'<>:"/\|?*').union(chr(i) for i in range(32))
@@ -80,3 +83,10 @@ def optional_valid(**kwargs: Optional[T]) -> Optional[T]:
     if valid is None:
         return None
     return valid[1]
+
+
+def link_to(text: str, url: str):
+    ret = QLabel(f'''<a href='{url}'>{text}</a>''')
+    ret.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
+    ret.setOpenExternalLinks(True)
+    return ret

@@ -9,7 +9,7 @@ from tests.gui.__util__ import test_as_main
 
 @test_as_main(close_on_confirm=True, cancel_value=None)
 class AskInt(FidgetConfirmer):
-    @inner_fidget('sample')
+    @inner_fidget('sample', help='i am help')
     class _(FidgetInt):
         pass
 

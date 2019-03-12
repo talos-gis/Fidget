@@ -12,14 +12,14 @@ PlaintextPrinter = Callable[[T], str]
 PlaintextParser = Callable[[str], T]
 
 
-# todo cursor position for parse errors?
-
-
 class PlaintextParseError(Exception):
     """
     An exception for when a parser failed to parse a plaintext
     """
-    pass
+
+    def __init__(self, *args, cursor_pos=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cursor_pos = cursor_pos
 
 
 class PlaintextPrintError(Exception):
@@ -62,21 +62,33 @@ def json_parser(acceptable_type: Union[Type, Tuple[Type, ...]] = object):
     """
 
     def ret(func):
+        return JsonParser(func, acceptable_type)
+
+    return ret
+
+
+class JsonParser:
+    def __init__(self, inner_func, acceptable_type):
+        self.__func__ = inner_func
+        self.__name__ = inner_func.__name__
+        self.acceptable_type = acceptable_type
+
+    def __get__(self, instance, owner):
+        func = self.__func__.__get__(instance, owner)
+
         @wraps(func)
         def ret(s: str, *args, **kwargs):
             try:
                 json_obj = json.loads(s)
             except json.JSONDecodeError as e:
-                raise PlaintextParseError() from e
+                raise PlaintextParseError(cursor_pos=e.pos) from e
             else:
-                if not isinstance(json_obj, acceptable_type):
+                if not isinstance(json_obj, self.acceptable_type):
                     raise PlaintextParseError(
-                        f'object is not of an acceptable type (expected {acceptable_type}, got {type(json_obj)})')
+                        f'object is not of an acceptable type (expected {self.acceptable_type}, got {type(json_obj)})')
                 return func(json_obj, *args, **kwargs)
 
         return ret
-
-    return ret
 
 
 def join_parsers(parsers: Callable[[], Iterable[PlaintextParser]]):
@@ -95,8 +107,6 @@ def join_parsers(parsers: Callable[[], Iterable[PlaintextParser]]):
                 return p(s)
             except PlaintextParseError as e:
                 first_error = first_error or e
-            except Exception as e:
-                raise AssertionError('plaintext parser raised') from e
         raise first_error or PlaintextParseError('no parsers')
 
     ret.__name__ = '<all>'

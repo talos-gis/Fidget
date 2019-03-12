@@ -22,7 +22,7 @@ class FidgetCheckBox(Generic[T], Fidget[T]):
         :param title: the title
         :param value_selector: a mapping from bool to the desired value
         :param initial: the initial boolean value
-        :param kwargs: forwarded to ValueWidget
+        :param kwargs: forwarded to Fidget
         """
         super().__init__(title, **kwargs)
 
@@ -79,11 +79,11 @@ class FidgetCheckBox(Generic[T], Fidget[T]):
                     return self.true_val
 
             try:
-                true_text = printer(self.false_val)
+                false_text = printer(self.false_val)
             except PlaintextPrintError:
                 pass
             else:
-                if true_text == text:
+                if false_text == text:
                     return self.false_val
         raise PlaintextParseError('text did not match any printed value')
 

@@ -10,7 +10,7 @@ from itertools import chain
 from fidget.backend.QtWidgets import QVBoxLayout, QStackedWidget, QComboBox, QFrame, QRadioButton, QGroupBox, \
     QCheckBox, QBoxLayout
 
-from fidget.core import Fidget, ParseError, FidgetTemplate
+from fidget.core import Fidget, ParseError, FidgetTemplate, TemplateLike
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
@@ -18,13 +18,18 @@ from fidget.widgets.__util__ import only_valid
 
 T = TypeVar('T')
 NamedTemplate = Union[
-    FidgetTemplate[T], Tuple[str, FidgetTemplate[T]],
-    Fidget[T], Tuple[str, Fidget[T]]
+    TemplateLike[T], Tuple[str, TemplateLike[T]]
 ]
 
 
 class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
+    """
+    Compounded Fidgets, only one of which has a value at any time
+    """
     class Selector(Fidget[int]):
+        """
+        A fidget that selects from fidget options, and stores the active fidget index
+        """
         MAKE_INDICATOR = MAKE_PLAINTEXT = MAKE_TITLE = False
 
         def __init__(self, *args, **kwargs):
@@ -43,6 +48,9 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
                 self.fill(self.options[index])
 
     class ComboSelector(Selector):
+        """
+        a selector using a combobox
+        """
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
@@ -71,6 +79,9 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
             super().fill(index)
 
     class RadioSelector(Selector):
+        """
+        a selector using radio buttons
+        """
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
@@ -110,6 +121,9 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
             super().fill(index)
 
     class CheckBoxSelector(Selector):
+        """
+        a selector between two options, using a checkbox
+        """
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
@@ -153,6 +167,15 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
                  frame_style=None, selector_cls: Union[Type[Selector], str] = None,
                  layout_cls: Type[QBoxLayout] = None,
                  **kwargs):
+        """
+        :param title: the title
+        :param inner_templates: an iterable of name-templates to act as key-value pairs
+        :param frame_style: the frame style to apply to the encompassing frame, if any
+        :param selector_cls: the class (or name) of a selector
+        :param layout_cls: the class of the layout
+        :param scrollable: whether to make the widget scrollable
+        :param kwargs: forwarded to Fidget
+        """
         self.inner_templates = dict(
             self._to_name_subtemplate(o) for o in
             only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES)
@@ -268,6 +291,6 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
     def _selector_changed(self):
         index = self.selector.value()
         if not index.is_ok():
-            raise index.value
+            raise index.exception
         self.stacked.setCurrentIndex(index.value)
         self.change_value()

@@ -9,14 +9,19 @@ from functools import wraps
 T = TypeVar('T')
 
 
+def error_chain(e: Exception):
+    while e:
+        yield e
+        e = e.__cause__
+
+
 def error_details(e: Exception):
     ret = []
     type_names = []
-    while e:
+    for e in error_chain(e):
         if e.args != ():
             ret.append(f'{type(e).__name__}: {e}')
         type_names.append(type(e).__name__)
-        e = e.__cause__
     if ret:
         return '\n\tfrom:\n'.join(ret)
     return '\n\tfrom:\n'.join(type_names)
@@ -24,22 +29,22 @@ def error_details(e: Exception):
 
 def error_tooltip(e: Exception):
     ret = None
-    while e:
-        if e.args == ():
+    for e in error_chain(e):
+        if e.args:
             ret = f'{type(e).__name__}: ...'
-            e = e.__cause__
-            continue
-        return f'{type(e).__name__}: {e}'
+        else:
+            return f'{type(e).__name__}: {e}'
     return ret
 
 
-def error_attr(e: Exception, attr_name: str, default=None):
-    ret = default
-    while e:
-        if hasattr(e, attr_name):
-            ret = getattr(e, attr_name)
-        e = e.__cause__
-    return ret
+_missing = object()
+
+
+def error_attrs(e: Exception, attr_name: str):
+    for e in error_chain(e):
+        attr = getattr(e, attr_name, _missing)
+        if attr is not _missing:
+            yield attr
 
 
 def exc_wrap(to_raise: Type[Exception]):
@@ -71,3 +76,10 @@ def first_valid(**kwargs: Optional[T]) -> T:
         return next(a for a in kwargs.values() if a is not None)
     except StopIteration as e:
         raise TypeError(f'none of {", ".join(kwargs.keys())} provided') from e
+
+
+def shorten(s: str, width: int, filler='...'):
+    if len(s) <= width:
+        return s
+    half_width = (width - len(filler)) // 2
+    return s[:half_width] + filler + s[-half_width:]

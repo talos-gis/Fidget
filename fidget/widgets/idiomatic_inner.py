@@ -65,6 +65,26 @@ class SingleFidgetWrapper(Generic[I, T], Fidget[T]):
     INNER_TEMPLATE: FidgetTemplate[I]
 
 
+@SingleFidgetWrapper.template_class
+class SingleFidgetWrapperTemplate(FidgetTemplate):
+    """
+    A template that forwards its title from its first parameter
+    """
+    @property
+    def title(self):
+        it = self._inner_template()
+        if it:
+            return it.title
+        return super().title
+
+    def _inner_template(self):
+        if self.widget_cls.INNER_TEMPLATE:
+            return self.widget_cls.INNER_TEMPLATE
+        if self.args:
+            return self.args[0].template_of()
+        return None
+
+
 class MultiFidgetWrapper(Generic[I, T], Fidget[T]):
     """
     A superclass for wrapping multiple templates

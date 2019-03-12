@@ -1,6 +1,6 @@
 from fidget.widgets.checkbox import FidgetCheckBox
 from fidget.widgets.combo import FidgetCombo
-from fidget.widgets.confirmer import FidgetConfirmer, ask
+from fidget.widgets.confirmer import FidgetConfirmer, FidgetQuestion, question
 from fidget.widgets.converter import FidgetConverter
 from fidget.widgets.multi_dict import FidgetDict
 from fidget.widgets.edit_combo import FidgetEditCombo

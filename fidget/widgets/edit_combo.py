@@ -9,7 +9,7 @@ T = TypeVar('T')
 
 class FidgetEditCombo(Generic[T], Fidget[T]):
     """
-    A ValueWidget for an editable ComboBox
+    A Fidget for an editable ComboBox
     """
     NO_DEFAULT_VALUE = object()
     CONVERT_NAME = object()
@@ -24,7 +24,7 @@ class FidgetEditCombo(Generic[T], Fidget[T]):
         :param convert_func: a function to convert plaintext edited value to a value
         :param default_index: the default index of the ComboBox. ignored if a valid default_value is provided
         :param default_value: the default value of the ComboBox
-        :param kwargs: forwarded to ValueWidget
+        :param kwargs: forwarded to Fidget
         """
         super().__init__(title, **kwargs)
         self.default_index = default_index

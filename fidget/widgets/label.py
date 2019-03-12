@@ -7,9 +7,11 @@ from fidget.core import Fidget, inner_plaintext_parser, PlaintextParseError, Pla
 T = TypeVar('T')
 
 
+# todo implement fill?
+
 class FidgetLabel(Generic[T], Fidget[T]):
     """
-    A ValueWidget that immutably contains a single value
+    A Fidget that immutably contains a single value
     """
     NO_DEFAULT_VALUE = object()
 
@@ -19,7 +21,7 @@ class FidgetLabel(Generic[T], Fidget[T]):
         """
         :param title: the title
         :param value: the single value to display
-        :param kwargs: forwarded to ValueWidget
+        :param kwargs: forwarded to Fidget
         """
         super().__init__(title, **kwargs)
 

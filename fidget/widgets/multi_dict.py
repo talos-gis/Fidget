@@ -6,7 +6,7 @@ import json
 from fidget.backend.QtWidgets import QVBoxLayout, QFrame, QScrollArea, QWidget, QBoxLayout
 
 from fidget.core import Fidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
-    PlaintextPrintError, PlaintextParseError, FidgetTemplate, explicit
+    PlaintextPrintError, PlaintextParseError, FidgetTemplate, explicit, json_parser, TemplateLike
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
@@ -14,24 +14,23 @@ from fidget.widgets.__util__ import only_valid
 
 T = TypeVar('T')
 NamedTemplate = Union[
-    FidgetTemplate[T], Tuple[str, FidgetTemplate[T]],
-    Fidget[T], Tuple[str, Fidget[T]]
+    TemplateLike[T], Tuple[str, TemplateLike[T]]
 ]
 
 
 class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
     """
-    A ValueWidget that wraps multiple ValueWidgets into a dict with str keys
+    A Fidget that wraps multiple Fidgets into a dict with str keys
     """
     def __init__(self, title, inner_templates: Iterable[NamedTemplate] = None, frame_style=None,
-                 layout_cls: Type[QBoxLayout] = None, scrollable=False, **kwargs):
+                 layout_cls: Type[QBoxLayout] = None, scrollable=None, **kwargs):
         """
         :param title: the title
         :param inner_templates: an iterable of name-templates to act as key-value pairs
         :param frame_style: the frame style to apply to the encompassing frame, if any
         :param layout_cls: the class of the layout
         :param scrollable: whether to make the widget scrollable
-        :param kwargs: forwarded to ValueWidget
+        :param kwargs: forwarded to Fidget
         """
 
         inner_templates = dict(
@@ -54,13 +53,16 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
     INNER_TEMPLATES: Iterable[NamedTemplate] = None
     LAYOUT_CLS = QVBoxLayout
     FRAME_STYLE = None
+    SCROLLABLE = True
 
-    def init_ui(self, frame_style=None, layout_cls=None, scrollable=False):
+    def init_ui(self, frame_style=None, layout_cls=None, scrollable=None):
         super().init_ui()
 
         layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
 
         owner = self
+        scrollable = first_valid(scrollable=scrollable, SCROLLABLE=self.SCROLLABLE)
+
         if scrollable:
             owner_layout = QVBoxLayout()
             owner.setLayout(owner_layout)
@@ -128,21 +130,14 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
                 raise ValidationError('error validating ' + subwidget.title, offender=subwidget) from e
 
     @inner_plaintext_parser
-    def from_json(self, v: str, exact=True):
-        try:
-            d = json.loads(v)
-        except json.JSONDecodeError as e:
-            raise PlaintextParseError() from e
-
-        if not isinstance(d, dict):
-            raise PlaintextParseError(f'json is a {type(d).__name__} instead of dict')
-
+    @json_parser(dict)
+    def from_json(self, d: dict, exact=True):
         not_seen = dict(self.inners)
 
         ret = {}
 
         for k, v in d.items():
-            subwidget = not_seen.get(k)
+            subwidget = not_seen.pop(k, None)
             if not subwidget:
                 if exact:
                     raise PlaintextParseError(f'key {k} has no appropriate widget')
@@ -198,29 +193,3 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
         if not all(sw.fill for sw in self.inners.values()):
             return None
         return self._fill
-
-
-if __name__ == '__main__':
-    from fidget.backend.QtWidgets import QApplication
-    from fidget.widgets import *
-
-
-    class PointWidget(FidgetDict):
-        MAKE_PLAINTEXT = True
-        MAKE_TITLE = True
-        MAKE_INDICATOR = True
-
-        INNER_TEMPLATES = [
-            FidgetFloat.template('X'),
-            FidgetFloat.template('Y'),
-            FidgetOptional.template(
-                FidgetFloat.template('Z', make_indicator=False, make_title=False)),
-        ]
-
-
-    app = QApplication([])
-    w = PointWidget('sample', scrollable=True)
-    w.show()
-    res = app.exec_()
-    print(w.value())
-    exit(res)

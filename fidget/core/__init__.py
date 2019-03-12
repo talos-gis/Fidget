@@ -1,4 +1,4 @@
-from fidget.core.fidget import Fidget, DoNotFill, FidgetTemplate
+from fidget.core.fidget import Fidget, DoNotFill, FidgetTemplate, TemplateLike
 from fidget.core.plaintext_adapter import \
     PlaintextPrintError, PlaintextParseError, \
     regex_parser, json_parser, \
@@ -6,5 +6,5 @@ from fidget.core.plaintext_adapter import \
     explicit, \
     wrap_plaintext_parser, wrap_plaintext_printer,\
     inner_plaintext_printer, inner_plaintext_parser
-from fidget.core.parsed_value import ParsedValue, ParseError, ValidationError
+from fidget.core.fidget_value import ParseError, ValidationError
 from fidget.core.user_util import wrap_parser, wrap_validator, validator

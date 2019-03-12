@@ -7,25 +7,28 @@ from itertools import chain
 from fidget.backend.QtWidgets import QVBoxLayout, QFrame, QBoxLayout
 
 from fidget.core import Fidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
-    PlaintextPrintError, PlaintextParseError, FidgetTemplate, explicit
+    PlaintextPrintError, PlaintextParseError, FidgetTemplate, explicit, json_parser, TemplateLike
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
 from fidget.widgets.__util__ import only_valid
 
-T = TypeVar('T')
-Template = Union[
-    FidgetTemplate[T],
-    Fidget[T]
-]
-
 
 # todo resume documentation
 
 class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
-    def __init__(self, title, inner_templates: Iterable[Template] = None, frame_style=None,
+    """
+    A Fidget that wraps multiple Fidgets into a tuple
+    """
+    def __init__(self, title, inner_templates: Iterable[TemplateLike] = None, frame_style=None,
                  layout_cls: Type[QBoxLayout] = None, **kwargs):
-
+        """
+        :param title: the title
+        :param inner_templates: an iterable of templates to act as elements
+        :param frame_style: the frame style to apply to the encompassing frame, if any
+        :param layout_cls: the class of the layout
+        :param kwargs: forwarded to Fidget
+        """
         self.inner_templates = tuple(
             t.template_of() for t in only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES)
         )
@@ -36,7 +39,7 @@ class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
 
         self.init_ui(frame_style=frame_style, layout_cls=layout_cls)
 
-    INNER_TEMPLATES: Iterable[Template] = None
+    INNER_TEMPLATES: Iterable[TemplateLike] = None
     LAYOUT_CLS: Type[QBoxLayout] = QVBoxLayout
 
     def init_ui(self, frame_style=None, layout_cls: Type[QBoxLayout] = None):
@@ -86,14 +89,8 @@ class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
                 raise ValidationError('error validating ' + subwidget.title, offender=subwidget) from e
 
     @inner_plaintext_parser
-    def from_json(self, v: str, exact_len=True):
-        try:
-            d = json.loads(v)
-        except json.JSONDecodeError as e:
-            raise PlaintextParseError() from e
-
-        if not isinstance(d, list):
-            raise PlaintextParseError(f'json is a {type(d).__name__} instead of list')
+    @json_parser(list)
+    def from_json(self, d: list, exact_len=True):
         if exact_len and len(d) != len(self.inners):
             raise PlaintextParseError(f'value number mismatch (expected {len(self.inners)}, got {len(d)})')
 

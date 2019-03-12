@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Generic, TypeVar, Optional, Callable, Tuple, Iterable, Type, Dict, Any
+from typing import Generic, TypeVar, Optional, Callable, Tuple, Iterable, Type, Dict, Any, Union
 
 from abc import abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from functools import partial, wraps
+from functools import partial, wraps, reduce
 from itertools import chain
 
 from fidget.backend.QtWidgets import QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
@@ -14,26 +14,38 @@ from fidget.backend.QtCore import Qt, pyqtSignal, __backend__
 
 from fidget.core.plaintext_adapter import PlaintextParseError, PlaintextPrintError, \
     join_parsers, join_printers, PlaintextParser, PlaintextPrinter
-from fidget.core.parsed_value import ParsedValue, ParseError, ValidationError
-from fidget.core.__util__ import error_details, error_tooltip, first_valid, error_attr
+from fidget.core.fidget_value import FidgetValue, BadValue, GoodValue, ParseError, ValidationError
+from fidget.core.__util__ import error_details, first_valid, error_attrs
 
 T = TypeVar('T')
 
 
-class FidgetTemplate(Generic[T]):
+class TemplateLike(Generic[T]):
+    @abstractmethod
+    def template_of(self) -> FidgetTemplate[T]:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def template(cls, *args, **kwargs) -> FidgetTemplate[T]:
+        pass
+
+
+class FidgetTemplate(Generic[T], TemplateLike[T]):
     """
-    A template for a ValueWidget
+    A template for a Fidget
     """
 
     def __init__(self, widget_cls: Type[Fidget[T]], args: Tuple, kwargs: Dict[str, Any]):
         """
-        :param widget_cls: the class of the ValueWidget
+        :param widget_cls: the class of the Fidget
         :param args: the positional arguments of the template
         :param kwargs: the keyword arguments of the template
         """
         self.widget_cls = widget_cls
         self.args = args
         self.kwargs = kwargs
+        self._instance: Optional[Fidget[T]] = None
 
     @property
     def title(self) -> Optional[str]:
@@ -114,12 +126,19 @@ class FidgetTemplate(Generic[T]):
         ))
         return f'{self.widget_cls.__name__}.template({params})'
 
+    def instance(self):
+        """
+        :return: a singleton instantiation of this template
+        """
+        if self._instance is None:
+            self._instance = self()
+        return self._instance
 
-class Fidget(QWidget, Generic[T]):
+
+class Fidget(QWidget, Generic[T], TemplateLike[T]):
     """
     A QWidget that can contain a value, parsed form its children widgets.
     """
-    # todo fast/slow validation/parse? does confirmed already handle this?
     on_change = pyqtSignal()
 
     # region inherit_me
@@ -151,6 +170,7 @@ class Fidget(QWidget, Generic[T]):
     MAKE_TITLE: bool = None
     MAKE_INDICATOR: bool = None
     MAKE_PLAINTEXT: bool = None
+    FLAGS = Qt.WindowFlags()
 
     def __new__(cls, *args, **kwargs):
         ret = super().__new__(cls, *args, **kwargs)
@@ -167,7 +187,7 @@ class Fidget(QWidget, Generic[T]):
                  help: str = None,
                  **kwargs):
         """
-        :param title: the title of the ValueWidget
+        :param title: the title of the Fidget
         :param args: additional arguments forwarded to QWidget
         :param validation_func: a validation callable, that will raise ValidationError if the parsed value is invalid
         :param auto_func: a function that returns an automatic value, to fill in the UI
@@ -179,8 +199,8 @@ class Fidget(QWidget, Generic[T]):
 
         :inheritors: don't set default values for these parameters, change the uppercase class variables instead.
         """
-        if kwargs.get('flags', ()) is None:
-            kwargs['flags'] = Qt.WindowFlags()
+        if kwargs.get('flags', None) is None:
+            kwargs['flags'] = self.FLAGS
 
         if 'flags' in kwargs and __backend__.__name__ == 'PySide2':
             kwargs['f'] = kwargs.pop('flags')
@@ -209,13 +229,13 @@ class Fidget(QWidget, Generic[T]):
 
         self._suppress_update = False
 
-        self._value: ParsedValue[T] = None
+        self._value: FidgetValue[T] = None
         self._joined_plaintext_printer = None
         self._joined_plaintext_parser = None
 
         if self.auto_func:
             if self.fill is None:
-                raise Exception('auto_func can only be used on a ValueWidget with an implemented fill method')
+                raise Exception('auto_func can only be used on a Fidget with an implemented fill method')
             else:
                 self.make_auto = True
         else:
@@ -223,15 +243,15 @@ class Fidget(QWidget, Generic[T]):
 
     def init_ui(self):
         """
-        initialise the internal widgets of the valuewidget
+        initialise the internal widgets of the Fidget
         :inheritors: If you intend your class to be subclassed, don't add any widgets to self.
         """
-        # todo split init_ui into two functions: one to build, one to construct
         self.setWindowTitle(self.title)
 
         if self.make_indicator:
             self.indicator_label = QLabel('')
-            self.indicator_label.mousePressEvent = self._detail_button_clicked
+            self.indicator_label.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
+            self.indicator_label.linkActivated.connect(self._detail_button_clicked)
 
         if self.make_auto:
             self.auto_button = QPushButton('auto')
@@ -241,12 +261,13 @@ class Fidget(QWidget, Generic[T]):
             self.plaintext_button = QPushButton('text')
             self.plaintext_button.clicked.connect(self._plaintext_btn_click)
 
-            self._plaintext_widget = PlaintextEditWidget(parent=self, flags=Qt.Dialog)
+            self._plaintext_widget = PlaintextEditWidget(parent=self)
 
         if self.make_title:
             self.title_label = QLabel(self.title)
             if self.help:
-                self.title_label.mousePressEvent = self._help_clicked
+                self.title_label.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
+                self.title_label.linkActivated.connect(self._help_clicked)
 
     # implement this method to allow the widget to be filled from outer elements (like plaintext or auto)
     fill: Optional[Callable[[Fidget[T], T], None]] = None
@@ -367,7 +388,7 @@ class Fidget(QWidget, Generic[T]):
             raise Exception(f'widget {self} does not have its fill function implemented')
         return self.fill(self.joined_plaintext_parser(s))
 
-    def value(self) -> ParsedValue[T]:
+    def value(self) -> Union[GoodValue[T], BadValue]:
         """
         :return: the current value of the widget
         """
@@ -451,21 +472,20 @@ class Fidget(QWidget, Generic[T]):
         if self._suppress_update:
             return
 
-        parsed = self.value()
+        value = self.value()
 
         if self.indicator_label and self.indicator_label.parent():
-            if parsed.is_ok():
-                text = 'OK'
-                tooltip = str(parsed.value)
+            if value.is_ok():
+                text = "<a href='...'>OK</a>"
             else:
-                text = 'ERR'
-                tooltip = error_tooltip(parsed.value)
+                text = "<a href='...'>ERR</a>"
+            tooltip = value.short_details
 
             self.indicator_label.setText(text)
             self.indicator_label.setToolTip(tooltip)
 
-        if self.plaintext_button and self.plaintext_button.parent():
-            self.plaintext_button.setEnabled(parsed.is_ok() or any(self.plaintext_parsers()))
+        if self.plaintext_button:
+            self.plaintext_button.setEnabled(value.is_ok() or any(self.plaintext_parsers()))
 
     def _reload_value(self):
         """
@@ -476,7 +496,7 @@ class Fidget(QWidget, Generic[T]):
             value = self.parse()
             self.validate(value)
         except (ValidationError, ParseError) as e:
-            self._value = ParsedValue.from_error(e)
+            self._value = BadValue.from_error(e)
             return
 
         try:
@@ -484,7 +504,7 @@ class Fidget(QWidget, Generic[T]):
         except PlaintextPrintError as e:
             details = 'details could not be loaded because of a parser error:\n' + error_details(e)
 
-        self._value = ParsedValue.from_value(value, details)
+        self._value = GoodValue(value, details)
 
     def _detail_button_clicked(self, event):
         """
@@ -492,10 +512,10 @@ class Fidget(QWidget, Generic[T]):
         """
         value = self.value()
         if value.details:
-            QMessageBox.information(self, type(value.value).__name__, value.details)
+            QMessageBox.information(self, value.type_details, value.details)
 
         if not value.is_ok():
-            offender: QWidget = error_attr(value.value, 'offender')
+            offender: QWidget = reduce(lambda x, y: y, error_attrs(value.exception, 'offender'), None)
             if offender:
                 offender.setFocus()
 
@@ -554,7 +574,7 @@ class DoNotFill(Exception):
 
 class PlaintextEditWidget(Generic[T], Fidget[T]):
     """
-    plaintext dialog for a ValueWidget
+    plaintext dialog for a Fidget
     """
 
     class _ShiftEnterIgnoringPlainTextEdit(QPlainTextEdit):
@@ -574,6 +594,7 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
     MAKE_INDICATOR = True
     MAKE_PLAINTEXT = False
     MAKE_TITLE = False
+    FLAGS = Qt.Dialog
 
     def __init__(self, *args, **kwargs):
         super().__init__('plaintext edit', *args, **kwargs)
@@ -786,19 +807,19 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
             raise ValueError('plaintext edit widget prepped for owner without any plaintext adapters')
 
     def commit_parse(self):
-        parsed = self.value()
-        if not parsed.is_ok():
-            QMessageBox.critical(self, 'error parsing plaintext', error_details(self.result_value))
+        value = self.value()
+        if not value.is_ok():
+            QMessageBox.critical(self, 'error parsing plaintext', value.details)
         else:
-            self.owner.fill(parsed.value)
+            self.owner.fill(value.value)
             self.close()
 
     def apply_parse(self):
-        parsed = self.value()
-        if not parsed.is_ok():
-            QMessageBox.critical(self, 'error parsing plaintext', error_details(self.result_value))
+        value = self.value()
+        if not value.is_ok():
+            QMessageBox.critical(self, 'error parsing plaintext', value.details)
         else:
-            self.owner.fill(parsed.value)
+            self.owner.fill(value.value)
             self.prep_for_show(clear_parse=False, clear_print=False)
             self.parse_edit.setFocus()
 
@@ -811,10 +832,23 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
         return bool(self.printers)
 
     def _on_value_change(self, *a):
-        state = self.value().value_state
+        value = self.value()
 
-        self.ok_button.setEnabled(state.is_ok())
-        self.apply_button.setEnabled(state.is_ok())
+        self.ok_button.setEnabled(value.is_ok())
+        self.apply_button.setEnabled(value.is_ok())
+
+    def _detail_button_clicked(self, event):
+        super()._detail_button_clicked(event)
+        value = self.value()
+        if not value.is_ok():
+            cursor_pos = sum(
+                (cp for cp in error_attrs(value.exception, 'cursor_pos') if cp is not None)
+                , 0)
+            if cursor_pos is not None:
+                cursor = self.parse_edit.textCursor()
+                if cursor:
+                    cursor.setPosition(cursor_pos)
+                    self.parse_edit.setTextCursor(cursor)
 
     def keyPressEvent(self, event):
         if (event.modifiers() == Qt.ShiftModifier and event.key() == Qt.Key_Return) \

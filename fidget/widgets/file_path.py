@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Union, Callable, Any
+from typing import Optional, Dict, Union, Callable, Any, Type
 
 from pathlib import Path
 from glob import iglob
@@ -33,8 +33,25 @@ FileDialogArgs = Union[Callable[..., QFileDialog], Dict[str, Any], QFileDialog]
 
 class FidgetFilePath(Fidget[Path]):
     """
-    A ValueWidget to store a Path to a file
+    A Fidget to store a Path to a file
     """
+
+    class RememberingFileDialog(QFileDialog):
+        """
+        A QFileDialog that remembers its last directory
+        """
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.last_dir = None
+
+        def exec(self):
+            if self.last_dir:
+                self.setDirectory(self.last_dir)
+            ret = super().exec_()
+            self.last_dir = super().directory()
+            return ret
+
     MAKE_INDICATOR = True
     MAKE_PLAINTEXT = False
 
@@ -43,7 +60,7 @@ class FidgetFilePath(Fidget[Path]):
         :param title: the title
         :param exist_cond: whether the file must exist (True), or must not exist (False)
         :param dialog: either a QFileDialog, a constructor, or arguments for a QFileDialog.
-        :param kwargs: forwarded to ValueWidget
+        :param kwargs: forwarded to Fidget
         """
         super().__init__(title, **kwargs)
         self.exist_cond = exist_cond if exist_cond is not None else self.EXIST_COND
@@ -53,7 +70,7 @@ class FidgetFilePath(Fidget[Path]):
 
         self.init_ui(dialog)
 
-    DIALOG: FileDialogArgs = QFileDialog
+    DIALOG: Type[QFileDialog] = RememberingFileDialog
     EXIST_COND = None
 
     def init_ui(self, dialog=None):
@@ -79,7 +96,6 @@ class FidgetFilePath(Fidget[Path]):
         self.setFocusProxy(self.edit)
 
     def browse(self, *a):
-        # todo the dialog doesn't stick to a directory
         if self.dialog.exec():
             self.fill(self.dialog.selectedFiles()[0])
 
@@ -118,23 +134,11 @@ class FidgetFilePath(Fidget[Path]):
         yield glob_search
         yield from super().plaintext_parsers()
 
-    @staticmethod
-    def _args_to_filedialog(arg):
+    @classmethod
+    def _args_to_filedialog(cls, arg):
         if isinstance(arg, QFileDialog):
             return arg
         if isinstance(arg, dict):
-            return QFileDialog(**arg)
+            return cls.DIALOG(**arg)
         if callable(arg):
             return arg()
-
-
-
-if __name__ == '__main__':
-    from fidget.backend import QApplication
-
-    app = QApplication([])
-    w = FidgetFilePath('sample', make_title=True, make_plaintext=True)
-    w.show()
-    res = app.exec_()
-    print(w.value())
-    exit(res)
