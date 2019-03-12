@@ -5,6 +5,8 @@ from typing import Generic, TypeVar, Union
 from dataclasses import dataclass
 from enum import IntEnum
 
+from fidget.backend.QtWidgets import QWidget
+
 from fidget.core.__util__ import error_details
 
 T = TypeVar('T')
@@ -12,14 +14,23 @@ T = TypeVar('T')
 
 # todo focus on the offending widget
 
-class ParseError(Exception):
+class ChildWidgetError(Exception):
+    """
+    An error that might be traced to a child widget, to focus on
+    """
+    def __init__(self, *args, offender: QWidget = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.offender = offender
+
+
+class ParseError(ChildWidgetError):
     """
     an exception class for when parsing UI fails
     """
     pass
 
 
-class ValidationError(Exception, Generic[T]):
+class ValidationError(ChildWidgetError, Generic[T]):
     """
     an exception class fro when a parsed value is invalid
     """
@@ -40,7 +51,7 @@ class ValueState(IntEnum):
         """
         return self > 0
 
-
+# todo split to two (more?) duck-typed values
 @dataclass(frozen=True)
 class ParsedValue(Generic[T]):
     """

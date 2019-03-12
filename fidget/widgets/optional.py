@@ -8,10 +8,10 @@ from functools import wraps, partial
 from fidget.backend.QtWidgets import QCheckBox, QHBoxLayout, QWidget, QApplication
 from fidget.backend.QtCore import QObject, QEvent, __backend__
 
-from fidget.core import ValueWidget, PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate
+from fidget.core import Fidget, PlaintextPrintError, PlaintextParseError, FidgetTemplate
 from fidget.core.__util__ import first_valid
 
-from fidget.widgets.idiomatic_inner import SingleWidgetWrapper
+from fidget.widgets.idiomatic_inner import SingleFidgetWrapper
 from fidget.widgets.__util__ import only_valid
 
 if __backend__.__name__ == 'PySide2':
@@ -21,7 +21,7 @@ T = TypeVar('T')
 C = TypeVar('C')
 
 
-class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
+class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
     """
     A ValueWidget wrapper that allows an inner ValueWidget to be disabled, setting the value to None or another singleton
     """
@@ -54,7 +54,7 @@ class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
                 return False
             return super().eventFilter(obj, event)
 
-    def __init__(self, inner_template: ValueWidgetTemplate[T] = None, default_state=False, layout_cls=None,
+    def __init__(self, inner_template: FidgetTemplate[T] = None, default_state=False, layout_cls=None,
                  none_value: C = None,
                  **kwargs):
         """
@@ -73,9 +73,9 @@ class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
 
         self.inner_template = inner_template
 
-        self.inner: ValueWidget[T] = None
+        self.inner: Fidget[T] = None
         self.not_none_checkbox: QCheckBox = None
-        self.warden: OptionalValueWidget.MouseWarden = None
+        self.warden: FidgetOptional.MouseWarden = None
 
         self.none_value = none_value
         none_names = self.singleton_names.get(self.none_value)
@@ -92,7 +92,7 @@ class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
 
         self.not_none_checkbox.setChecked(default_state)
 
-    INNER_TEMPLATE: ValueWidgetTemplate[T] = None
+    INNER_TEMPLATE: FidgetTemplate[T] = None
     LAYOUT_CLS = QHBoxLayout
 
     def init_ui(self, layout_cls=None):
@@ -166,8 +166,8 @@ class OptionalValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
         self.change_value()
 
 
-@OptionalValueWidget.template_class
-class OptionalTemplate(Generic[T], ValueWidgetTemplate[T]):
+@FidgetOptional.template_class
+class OptionalTemplate(Generic[T], FidgetTemplate[T]):
     @property
     def title(self):
         it = self._inner_template()
@@ -187,8 +187,8 @@ if __name__ == '__main__':
     from fidget.widgets import *
 
     app = QApplication([])
-    w = OptionalValueWidget(
-        IntEdit.template('source ovr', placeholder=False, make_title=True, make_indicator=True),
+    w = FidgetOptional(
+        FidgetInt.template('source ovr', placeholder=False, make_title=True, make_indicator=True),
     )
     w.show()
     res = app.exec_()

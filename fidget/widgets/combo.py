@@ -2,12 +2,12 @@ from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List
 
 from fidget.backend.QtWidgets import QComboBox, QHBoxLayout
 
-from fidget.core import ValueWidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
+from fidget.core import Fidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
 
 T = TypeVar('T')
 
 
-class ValueCombo(Generic[T], ValueWidget[T]):
+class FidgetCombo(Generic[T], Fidget[T]):
     """
     A ComboBox with values for each option
     """
@@ -66,9 +66,11 @@ class ValueCombo(Generic[T], ValueWidget[T]):
             self.combo_box.setCurrentIndex(ind)
             self.combo_box.currentIndexChanged.connect(self.change_value)
 
+        self.setFocusProxy(self.combo_box)
+
     def parse(self):
         if self.combo_box.currentIndex() == -1:
-            raise ParseError('value is unset')
+            raise ParseError('value is unset', offender=self.combo_box)
         return self.combo_box.currentData()
 
     def extract_name_and_value(self, value: Union[Tuple[str, T], T]) -> Tuple[str, T]:
@@ -124,7 +126,7 @@ if __name__ == '__main__':
 
 
     app = QApplication([])
-    w = ValueCombo('sample', options=Options)
+    w = FidgetCombo('sample', options=Options)
     w.show()
     w.fill_from_text('Options.first')
     res = app.exec_()

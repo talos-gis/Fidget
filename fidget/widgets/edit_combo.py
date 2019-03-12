@@ -2,12 +2,12 @@ from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List, Callabl
 
 from fidget.backend.QtWidgets import QComboBox, QHBoxLayout
 
-from fidget.core import ValueWidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
+from fidget.core import Fidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
 
 T = TypeVar('T')
 
 
-class ValueEditCombo(Generic[T], ValueWidget[T]):
+class FidgetEditCombo(Generic[T], Fidget[T]):
     """
     A ValueWidget for an editable ComboBox
     """
@@ -70,6 +70,7 @@ class ValueEditCombo(Generic[T], ValueWidget[T]):
 
             self.combo_box.setCurrentIndex(ind)
             self.combo_box.editTextChanged.connect(self.change_value)
+            self.setFocusProxy(self.combo_box)
 
     def parse(self):
         cur_text = self.combo_box.currentText()
@@ -120,7 +121,7 @@ class ValueEditCombo(Generic[T], ValueWidget[T]):
         try:
             _, ret = self._opt_lookup_name[name]
         except KeyError as e:
-            raise PlaintextParseError(...) from e
+            raise PlaintextParseError() from e
         else:
             return ret
 
@@ -129,7 +130,7 @@ class ValueEditCombo(Generic[T], ValueWidget[T]):
         try:
             _ = self.convert(v)
         except ParseError as e:
-            raise PlaintextParseError(...) from e
+            raise PlaintextParseError() from e
         return v
 
     def convert(self, v: str):
@@ -142,17 +143,17 @@ if __name__ == '__main__':
     from fidget.core import wrap_parser
 
     app = QApplication([])
-    w = ValueEditCombo('sample',
-                       options=[
+    w = FidgetEditCombo('sample',
+                        options=[
                            ('one', 1),
                            ('two', 2),
                            ('three', 3)
                        ],
-                       convert_func=wrap_parser(ValueError, int),
-                       make_title=True,
-                       make_plaintext=True,
-                       make_indicator=True
-                       )
+                        convert_func=wrap_parser(ValueError, int),
+                        make_title=True,
+                        make_plaintext=True,
+                        make_indicator=True
+                        )
     w.show()
     res = app.exec_()
     print(w.value())

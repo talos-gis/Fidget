@@ -4,7 +4,6 @@ from fidget.core.__util__ import exc_wrap
 wrap_parser = exc_wrap(ParseError)
 wrap_validator = exc_wrap(ValidationError)
 
-
 def validator(message=..., func=None):
     """
     wrap a function so it throws a ValidationError if it returns False

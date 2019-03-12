@@ -1,15 +1,15 @@
 from fidget.backend.QtWidgets import QApplication, QHBoxLayout, QFrame
 
-from fidget.widgets import LabelValueWidget, IntEdit, StackedValueWidget
+from fidget.widgets import FidgetLabel, FidgetInt, FidgetStacked
 
 if __name__ == '__main__':
 
     app = QApplication([])
-    w = StackedValueWidget('number', [
-        IntEdit('raw text'),
-        LabelValueWidget('auto', ('auto', 123456))
-    ], make_plaintext=True, frame_style=QFrame.Box, selector_cls=StackedValueWidget.CheckBoxSelector,
-                           layout_cls=QHBoxLayout, make_indicator=False)
+    w = FidgetStacked('number', [
+        FidgetInt('raw text'),
+        FidgetLabel('auto', ('auto', 123456))
+    ], make_plaintext=True, frame_style=QFrame.Box, selector_cls=FidgetStacked.CheckBoxSelector,
+                      layout_cls=QHBoxLayout, make_indicator=False)
     w.show()
     res = app.exec_()
     print(w.value())

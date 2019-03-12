@@ -5,21 +5,21 @@ import json
 
 from fidget.backend.QtWidgets import QVBoxLayout, QFrame, QScrollArea, QWidget, QBoxLayout
 
-from fidget.core import ValueWidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
-    PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
+from fidget.core import Fidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
+    PlaintextPrintError, PlaintextParseError, FidgetTemplate, explicit
 from fidget.core.__util__ import first_valid
 
-from fidget.widgets.idiomatic_inner import MultiWidgetWrapper
+from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
 from fidget.widgets.__util__ import only_valid
 
 T = TypeVar('T')
 NamedTemplate = Union[
-    ValueWidgetTemplate[T], Tuple[str, ValueWidgetTemplate[T]],
-    ValueWidget[T], Tuple[str, ValueWidget[T]]
+    FidgetTemplate[T], Tuple[str, FidgetTemplate[T]],
+    Fidget[T], Tuple[str, Fidget[T]]
 ]
 
 
-class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
+class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
     """
     A ValueWidget that wraps multiple ValueWidgets into a dict with str keys
     """
@@ -39,13 +39,13 @@ class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
             only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES)
         )
 
-        ValueWidgetTemplate.extract_default(*inner_templates.values(), sink=kwargs, upper_space=self)
+        FidgetTemplate.extract_default(*inner_templates.values(), sink=kwargs, upper_space=self)
 
         super().__init__(title, **kwargs)
 
         self.inner_templates = inner_templates
 
-        self.inners: Dict[str, ValueWidget] = None
+        self.inners: Dict[str, Fidget] = None
 
         frame_style = frame_style or self.FRAME_STYLE
 
@@ -96,7 +96,7 @@ class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
         master_layout.addWidget(frame)
 
     @staticmethod
-    def _to_name_subtemplate(option: NamedTemplate) -> Tuple[str, ValueWidgetTemplate[T]]:
+    def _to_name_subtemplate(option: NamedTemplate) -> Tuple[str, FidgetTemplate[T]]:
         try:
             template = option.template_of()
         except AttributeError:
@@ -114,7 +114,7 @@ class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
             try:
                 value = subwidget.parse()
             except ParseError as e:
-                raise ParseError('error parsing ' + subwidget.title) from e
+                raise ParseError('error parsing ' + subwidget.title, offender=subwidget) from e
             d[key] = value
         return d
 
@@ -125,22 +125,24 @@ class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
             try:
                 subwidget.validate(v)
             except ValidationError as e:
-                raise ValidationError('error validating ' + subwidget.title) from e
+                raise ValidationError('error validating ' + subwidget.title, offender=subwidget) from e
 
     @inner_plaintext_parser
     def from_json(self, v: str, exact=True):
         try:
             d = json.loads(v)
         except json.JSONDecodeError as e:
-            raise PlaintextParseError(...) from e
+            raise PlaintextParseError() from e
 
         if not isinstance(d, dict):
             raise PlaintextParseError(f'json is a {type(d).__name__} instead of dict')
 
+        not_seen = dict(self.inners)
+
         ret = {}
 
         for k, v in d.items():
-            subwidget = self.inners.get(k)
+            subwidget = not_seen.get(k)
             if not subwidget:
                 if exact:
                     raise PlaintextParseError(f'key {k} has no appropriate widget')
@@ -154,6 +156,10 @@ class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
                 raise PlaintextParseError(f'error parsing {k}') from e
 
             ret[k] = parsed
+
+        if exact and not_seen:
+            k, _ = not_seen.popitem()
+            raise PlaintextParseError(f'key not found: {k}') from KeyError(k)
 
         return ret
 
@@ -176,7 +182,7 @@ class DictWidget(MultiWidgetWrapper[Any, Mapping[str, Any]]):
         try:
             return json.dumps(ret)
         except TypeError as e:
-            raise PlaintextPrintError(...) from e
+            raise PlaintextPrintError() from e
 
     def plaintext_parsers(self):
         if self.fill:
@@ -199,16 +205,16 @@ if __name__ == '__main__':
     from fidget.widgets import *
 
 
-    class PointWidget(DictWidget):
+    class PointWidget(FidgetDict):
         MAKE_PLAINTEXT = True
         MAKE_TITLE = True
         MAKE_INDICATOR = True
 
         INNER_TEMPLATES = [
-            FloatEdit.template('X'),
-            FloatEdit.template('Y'),
-            OptionalValueWidget.template(
-                FloatEdit.template('Z', make_indicator=False, make_title=False)),
+            FidgetFloat.template('X'),
+            FidgetFloat.template('Y'),
+            FidgetOptional.template(
+                FidgetFloat.template('Z', make_indicator=False, make_title=False)),
         ]
 
 

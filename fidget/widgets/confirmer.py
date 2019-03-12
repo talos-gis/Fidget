@@ -5,24 +5,24 @@ from typing import TypeVar, Generic, Union, NoReturn, Callable, Type
 from fidget.backend.QtWidgets import QHBoxLayout, QApplication, QPushButton, QVBoxLayout, QBoxLayout, QMessageBox
 from fidget.backend.QtCore import Qt
 
-from fidget.core import ValueWidget, ValueWidgetTemplate, ParseError
+from fidget.core import Fidget, FidgetTemplate, ParseError
 from fidget.core.__util__ import first_valid
 
-from fidget.widgets.idiomatic_inner import SingleWidgetWrapper
+from fidget.widgets.idiomatic_inner import SingleFidgetWrapper
 from fidget.widgets.__util__ import only_valid
 
 T = TypeVar('T')
 C = TypeVar('C')
 
 
-class ConfirmValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
+class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
     """
     A ValueWidget that wraps another ValueWidget. Adding an Ok and (potentially) Cancel buttons, that trigger this
     ValueWidget's validation. Useful for dialogs or for slow validations
     """
     NO_CANCEL: NoReturn = object()
 
-    def __init__(self, inner_template: ValueWidgetTemplate[T] = None, layout_cls=None,
+    def __init__(self, inner_template: FidgetTemplate[T] = None, layout_cls=None,
                  cancel_value: C = NO_CANCEL, close_on_confirm=None, ok_text=None, cancel_text=None,
                  **kwargs):
         """
@@ -41,7 +41,7 @@ class ConfirmValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
 
         self.inner_template = inner_template
 
-        self.inner: ValueWidget[T] = None
+        self.inner: Fidget[T] = None
         self.ok_button: QPushButton = None
         self.cancel_button: QPushButton = None
 
@@ -55,7 +55,7 @@ class ConfirmValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
 
         self._inner_changed()
 
-    INNER_TEMPLATE: ValueWidgetTemplate[T] = None
+    INNER_TEMPLATE: FidgetTemplate[T] = None
     LAYOUT_CLS = QVBoxLayout
     MAKE_TITLE = MAKE_PLAINTEXT = MAKE_INDICATOR = False
     CLOSE_ON_CONFIRM = False
@@ -92,7 +92,7 @@ class ConfirmValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
             return self.cancel_value
         inner_value = self.inner.value()
         if not inner_value.is_ok():
-            raise ParseError(...) from inner_value.value
+            raise ParseError(offender=self.inner) from inner_value.value
         return inner_value.value
 
     def _inner_changed(self):
@@ -129,15 +129,16 @@ class ConfirmValueWidget(Generic[T, C], SingleWidgetWrapper[T, Union[T, C]]):
             super().keyPressEvent(event)
 
     def closeEvent(self, event):
-        self.cancel_flag = True
-        self.change_value()
+        if event.spontaneous():
+            self.cancel_flag = True
+            self.change_value()
         super().closeEvent(event)
 
 
 # todo common superclass
 
-@ConfirmValueWidget.template_class
-class ConfirmTemplate(Generic[T], ValueWidgetTemplate[T]):
+@FidgetConfirmer.template_class
+class ConfirmTemplate(Generic[T], FidgetTemplate[T]):
     @property
     def title(self):
         it = self._inner_template()
@@ -154,7 +155,7 @@ class ConfirmTemplate(Generic[T], ValueWidgetTemplate[T]):
 
 
 def ask(*args, **kwargs) -> \
-        Callable[[Union[Type[ValueWidget[T]], ValueWidget[T], ValueWidgetTemplate[T]]], ValueWidgetTemplate[T]]:
+        Callable[[Union[Type[Fidget[T]], Fidget[T], FidgetTemplate[T]]], FidgetTemplate[T]]:
     """
     wrap a ValueWidget in a ConfirmValueWidget
     :param args: forwarded to ConfirmValueWidget
@@ -164,15 +165,15 @@ def ask(*args, **kwargs) -> \
     kwargs.setdefault('close_on_confirm', True)
     kwargs.setdefault('flags', Qt.Dialog)
 
-    def ret(c: Union[Type[ValueWidget[T]], ValueWidget[T], ValueWidgetTemplate[T]]) -> ValueWidgetTemplate[T]:
-        if isinstance(c, type) and issubclass(c, ValueWidget):
+    def ret(c: Union[Type[Fidget[T]], Fidget[T], FidgetTemplate[T]]) -> FidgetTemplate[T]:
+        if isinstance(c, type) and issubclass(c, Fidget):
             template_of = c.template()
-        elif isinstance(c, (ValueWidget, ValueWidgetTemplate)):
+        elif isinstance(c, (Fidget, FidgetTemplate)):
             template_of = c.template_of()
         else:
             raise TypeError(f'cannot wrap {c} in ask')
 
-        return ConfirmValueWidget.template(template_of, *args, **kwargs)
+        return FidgetConfirmer.template(template_of, *args, **kwargs)
 
     return ret
 
@@ -182,12 +183,12 @@ if __name__ == '__main__':
 
     app = QApplication([])
 
-    w = ConverterWidget(
-        ConfirmValueWidget(
-            IntEdit.template('source ovr', make_title=True, make_indicator=True),
+    w = FidgetConverter(
+        FidgetConfirmer(
+            FidgetInt.template('source ovr', make_title=True, make_indicator=True),
             cancel_value=None
         ),
-        converter_func=lambda x: (x * x if isinstance(x, int) else 0)
+        converter_func=lambda x: (x * x if isinstance(x, int) else None)
     )
     w.on_change.connect(lambda: print(w.value()))
     w.show()

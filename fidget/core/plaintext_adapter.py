@@ -63,16 +63,16 @@ def json_parser(acceptable_type: Union[Type, Tuple[Type, ...]] = object):
 
     def ret(func):
         @wraps(func)
-        def ret(s: str):
+        def ret(s: str, *args, **kwargs):
             try:
                 json_obj = json.loads(s)
             except json.JSONDecodeError as e:
-                raise PlaintextParseError(...) from e
+                raise PlaintextParseError() from e
             else:
                 if not isinstance(json_obj, acceptable_type):
                     raise PlaintextParseError(
                         f'object is not of an acceptable type (expected {acceptable_type}, got {type(json_obj)})')
-                return func(json_obj)
+                return func(json_obj, *args, **kwargs)
 
         return ret
 

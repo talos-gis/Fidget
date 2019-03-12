@@ -2,12 +2,12 @@ from typing import TypeVar, Generic, Tuple, Union, Mapping
 
 from fidget.backend.QtWidgets import QCheckBox, QHBoxLayout
 
-from fidget.core import ValueWidget, inner_plaintext_parser, PlaintextPrintError, PlaintextParseError
+from fidget.core import Fidget, inner_plaintext_parser, PlaintextPrintError, PlaintextParseError
 
 T = TypeVar('T')
 
 
-class ValueCheckBox(Generic[T], ValueWidget[T]):
+class FidgetCheckBox(Generic[T], Fidget[T]):
     """
     A checkbox that can contain one of two values
     """
@@ -41,6 +41,8 @@ class ValueCheckBox(Generic[T], ValueWidget[T]):
             self.checkbox = QCheckBox()
             self.checkbox.toggled.connect(self.change_value)
             layout.addWidget(self.checkbox)
+
+        self.setFocusProxy(self.checkbox)
 
     @property
     def true_val(self):
@@ -98,7 +100,7 @@ if __name__ == '__main__':
 
 
     app = QApplication([])
-    w = ValueCheckBox('sample', ('NO', 'YES'))
+    w = FidgetCheckBox('sample', ('NO', 'YES'))
     w.show()
     res = app.exec_()
     print(w.value())

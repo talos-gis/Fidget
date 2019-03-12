@@ -5,7 +5,7 @@ from glob import iglob
 
 from fidget.backend.QtWidgets import QHBoxLayout, QLineEdit, QFileDialog, QPushButton
 
-from fidget.core import ValueWidget, ValidationError, PlaintextParseError
+from fidget.core import Fidget, ValidationError, PlaintextParseError
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.__util__ import filename_valid
@@ -31,7 +31,7 @@ def glob_search(pattern):
 FileDialogArgs = Union[Callable[..., QFileDialog], Dict[str, Any], QFileDialog]
 
 
-class FilePathWidget(ValueWidget[Path]):
+class FidgetFilePath(Fidget[Path]):
     """
     A ValueWidget to store a Path to a file
     """
@@ -76,6 +76,8 @@ class FilePathWidget(ValueWidget[Path]):
             browse_btn.pressed.connect(self.browse)
             layout.addWidget(browse_btn)
 
+        self.setFocusProxy(self.edit)
+
     def browse(self, *a):
         # todo the dialog doesn't stick to a directory
         if self.dialog.exec():
@@ -89,24 +91,24 @@ class FilePathWidget(ValueWidget[Path]):
         try:
             exists = value.exists()
         except OSError:
-            raise ValidationError('path seems invalid')
+            raise ValidationError('path seems invalid', offender=self.edit)
 
         if exists:
             if self.exist_cond not in (True, None):
-                raise ValidationError("path already exists")
+                raise ValidationError("path already exists", offender=self.edit)
             # if the file exists, we don't need to check it
         else:
             if self.exist_cond not in (False, None):
-                raise ValidationError("path doesn't exists")
+                raise ValidationError("path doesn't exists", offender=self.edit)
             # so checking of a filename is valid is stupid complicated, slow, and fallible,
             # https://stackoverflow.com/questions/9532499/check-whether-a-path-is-valid-in-python-without-creating-a-file-at-the-paths-ta/34102855#34102855
             # we're just gonna check for invalid characters
             if not filename_valid(value):
-                raise ValidationError('path seems invalid')
+                raise ValidationError('path seems invalid', offender=self.edit)
 
         if exists \
                 and value.is_dir():
-            raise ValidationError('path is a directory')
+            raise ValidationError('path is a directory', offender=self.edit)
 
     def fill(self, v: Path):
         self.edit.setText(str(v))
@@ -131,7 +133,7 @@ if __name__ == '__main__':
     from fidget.backend import QApplication
 
     app = QApplication([])
-    w = FilePathWidget('sample', make_title=True, make_plaintext=True)
+    w = FidgetFilePath('sample', make_title=True, make_plaintext=True)
     w.show()
     res = app.exec_()
     print(w.value())

@@ -1,4 +1,4 @@
-from fidget.core.value_widget import ValueWidget, DoNotFill, ValueWidgetTemplate
+from fidget.core.fidget import Fidget, DoNotFill, FidgetTemplate
 from fidget.core.plaintext_adapter import \
     PlaintextPrintError, PlaintextParseError, \
     regex_parser, json_parser, \

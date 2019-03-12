@@ -10,21 +10,21 @@ from itertools import chain
 from fidget.backend.QtWidgets import QVBoxLayout, QStackedWidget, QComboBox, QFrame, QRadioButton, QGroupBox, \
     QCheckBox, QBoxLayout
 
-from fidget.core import ValueWidget, ParseError, ValueWidgetTemplate
+from fidget.core import Fidget, ParseError, FidgetTemplate
 from fidget.core.__util__ import first_valid
 
-from fidget.widgets.idiomatic_inner import MultiWidgetWrapper
+from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
 from fidget.widgets.__util__ import only_valid
 
 T = TypeVar('T')
 NamedTemplate = Union[
-    ValueWidgetTemplate[T], Tuple[str, ValueWidgetTemplate[T]],
-    ValueWidget[T], Tuple[str, ValueWidget[T]]
+    FidgetTemplate[T], Tuple[str, FidgetTemplate[T]],
+    Fidget[T], Tuple[str, Fidget[T]]
 ]
 
 
-class StackedValueWidget(Generic[T], MultiWidgetWrapper[T, T]):
-    class Selector(ValueWidget[int]):
+class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
+    class Selector(Fidget[int]):
         MAKE_INDICATOR = MAKE_PLAINTEXT = MAKE_TITLE = False
 
         def __init__(self, *args, **kwargs):
@@ -158,13 +158,13 @@ class StackedValueWidget(Generic[T], MultiWidgetWrapper[T, T]):
             only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES)
         )
 
-        ValueWidgetTemplate.extract_default(*self.inner_templates.values(), sink=kwargs, upper_space=self, union=True)
+        FidgetTemplate.extract_default(*self.inner_templates.values(), sink=kwargs, upper_space=self, union=True)
 
         super().__init__(title, **kwargs)
 
-        self.inners: Dict[str, ValueWidget[T]] = None
+        self.inners: Dict[str, Fidget[T]] = None
 
-        self.selector: StackedValueWidget.Selector = None
+        self.selector: FidgetStacked.Selector = None
 
         selector_cls = first_valid(selector_cls=selector_cls, SELECTOR_CLS=self.SELECTOR_CLS)
         if isinstance(selector_cls, str):
@@ -197,7 +197,7 @@ class StackedValueWidget(Generic[T], MultiWidgetWrapper[T, T]):
 
             self.inners = {}
             for name, inner_template in self.inner_templates.items():
-                inner: ValueWidget[T] = inner_template()
+                inner: Fidget[T] = inner_template()
                 if self.inners.setdefault(name, inner) is not inner:
                     raise TypeError(f'duplicate inner name: {name}')
 
@@ -241,8 +241,8 @@ class StackedValueWidget(Generic[T], MultiWidgetWrapper[T, T]):
                 new_parser.__name__ = n + ': ' + p.__name__
                 yield new_parser
 
-    def current_subwidget(self) -> ValueWidget[T]:
-        v: ValueWidget[T] = self.stacked.currentWidget()
+    def current_subwidget(self) -> Fidget[T]:
+        v: Fidget[T] = self.stacked.currentWidget()
         return v
 
     def fill(self, v: Union[T, targeted_fill]):
@@ -253,7 +253,7 @@ class StackedValueWidget(Generic[T], MultiWidgetWrapper[T, T]):
         self.current_subwidget().fill(v)
 
     @staticmethod
-    def _to_name_subtemplate(option: NamedTemplate) -> Tuple[str, ValueWidgetTemplate[T]]:
+    def _to_name_subtemplate(option: NamedTemplate) -> Tuple[str, FidgetTemplate[T]]:
         try:
             template = option.template_of()
         except AttributeError:

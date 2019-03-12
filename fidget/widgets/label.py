@@ -2,12 +2,12 @@ from typing import TypeVar, Generic, Tuple, Union
 
 from fidget.backend.QtWidgets import QLabel, QHBoxLayout
 
-from fidget.core import ValueWidget, inner_plaintext_parser, PlaintextParseError, PlaintextPrintError
+from fidget.core import Fidget, inner_plaintext_parser, PlaintextParseError, PlaintextPrintError
 
 T = TypeVar('T')
 
 
-class LabelValueWidget(Generic[T], ValueWidget[T]):
+class FidgetLabel(Generic[T], Fidget[T]):
     """
     A ValueWidget that immutably contains a single value
     """
@@ -36,6 +36,8 @@ class LabelValueWidget(Generic[T], ValueWidget[T]):
         with self.setup_provided(layout):
             self.label = QLabel(self.name)
             layout.addWidget(self.label)
+
+        self.setFocusProxy(self.label)
 
     def parse(self):
         return self.single_value
@@ -86,7 +88,7 @@ if __name__ == '__main__':
     from fidget.backend import QApplication
 
     app = QApplication([])
-    w = LabelValueWidget('sample', ('Hi', 1245))
+    w = FidgetLabel('sample', ('Hi', 1245))
     w.show()
     res = app.exec_()
     print(w.value())

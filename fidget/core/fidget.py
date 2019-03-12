@@ -15,20 +15,17 @@ from fidget.backend.QtCore import Qt, pyqtSignal, __backend__
 from fidget.core.plaintext_adapter import PlaintextParseError, PlaintextPrintError, \
     join_parsers, join_printers, PlaintextParser, PlaintextPrinter
 from fidget.core.parsed_value import ParsedValue, ParseError, ValidationError
-from fidget.core.__util__ import error_details, error_tooltip, first_valid
+from fidget.core.__util__ import error_details, error_tooltip, first_valid, error_attr
 
 T = TypeVar('T')
 
 
-# todo document this bullcrap
-
-
-class ValueWidgetTemplate(Generic[T]):
+class FidgetTemplate(Generic[T]):
     """
     A template for a ValueWidget
     """
 
-    def __init__(self, widget_cls: Type[ValueWidget[T]], args: Tuple, kwargs: Dict[str, Any]):
+    def __init__(self, widget_cls: Type[Fidget[T]], args: Tuple, kwargs: Dict[str, Any]):
         """
         :param widget_cls: the class of the ValueWidget
         :param args: the positional arguments of the template
@@ -54,7 +51,7 @@ class ValueWidgetTemplate(Generic[T]):
     def _partial(self):
         return partial(self.widget_cls, *self.args, **self.kwargs)
 
-    def __call__(self, *args, **kwargs) -> ValueWidget[T]:
+    def __call__(self, *args, **kwargs) -> Fidget[T]:
         """
         Create a widget form the template. args and kwargs are forwarded to the class constructor.
         """
@@ -74,7 +71,7 @@ class ValueWidgetTemplate(Generic[T]):
         """
         return self
 
-    def extract_default(*templates: ValueWidgetTemplate, sink: dict, upper_space, keys: Iterable[str] = ...,
+    def extract_default(*templates: FidgetTemplate, sink: dict, upper_space, keys: Iterable[str] = ...,
                         union=True):
         """
         inject the default values from a template or collection of templates as defaults for keyword arguments.
@@ -118,7 +115,7 @@ class ValueWidgetTemplate(Generic[T]):
         return f'{self.widget_cls.__name__}.template({params})'
 
 
-class ValueWidget(QWidget, Generic[T]):
+class Fidget(QWidget, Generic[T]):
     """
     A QWidget that can contain a value, parsed form its children widgets.
     """
@@ -127,7 +124,7 @@ class ValueWidget(QWidget, Generic[T]):
 
     # region inherit_me
     """
-    How do I inherit ValueWidget?
+    How do I inherit Fidget?
     * MAKE_TITLE, MAKE_INDICATOR, MAKE_PLAINTEXT, set these for true or false to implement default values.
     * __init__: Call super().__init__ and all's good.
         Don't fill validation_func or auto_func here, instead re-implement validate.
@@ -252,7 +249,7 @@ class ValueWidget(QWidget, Generic[T]):
                 self.title_label.mousePressEvent = self._help_clicked
 
     # implement this method to allow the widget to be filled from outer elements (like plaintext or auto)
-    fill: Optional[Callable[[ValueWidget[T], T], None]] = None
+    fill: Optional[Callable[[Fidget[T], T], None]] = None
 
     @abstractmethod
     def parse(self) -> T:
@@ -386,11 +383,11 @@ class ValueWidget(QWidget, Generic[T]):
         self._update_indicator()
         self.on_change.emit()
 
-    _template_class: Type[ValueWidgetTemplate[T]] = ValueWidgetTemplate
+    _template_class: Type[FidgetTemplate[T]] = FidgetTemplate
 
     @classmethod
     @wraps(__init__)
-    def template(cls, *args, **kwargs) -> ValueWidgetTemplate[T]:
+    def template(cls, *args, **kwargs) -> FidgetTemplate[T]:
         """
         get a template of the type
         :param args: arguments for the template
@@ -399,7 +396,7 @@ class ValueWidget(QWidget, Generic[T]):
         """
         return cls._template_class(cls, args, kwargs)
 
-    def template_of(self) -> ValueWidgetTemplate[T]:
+    def template_of(self) -> FidgetTemplate[T]:
         """
         get a template to recreate the widget
         """
@@ -493,8 +490,14 @@ class ValueWidget(QWidget, Generic[T]):
         """
         show details of the value
         """
-        if self._value.details:
-            QMessageBox.information(self, 'validation details', self._value.details)
+        value = self.value()
+        if value.details:
+            QMessageBox.information(self, type(value.value).__name__, value.details)
+
+        if not value.is_ok():
+            offender: QWidget = error_attr(value.value, 'offender')
+            if offender:
+                offender.setFocus()
 
     def _help_clicked(self, event):
         """
@@ -549,7 +552,7 @@ class DoNotFill(Exception):
     pass
 
 
-class PlaintextEditWidget(Generic[T], ValueWidget[T]):
+class PlaintextEditWidget(Generic[T], Fidget[T]):
     """
     plaintext dialog for a ValueWidget
     """
@@ -587,7 +590,7 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
         self.parse_edit: PlaintextEditWidget._ShiftEnterIgnoringPlainTextEdit = None
         self.parse_combo: QComboBox = None
 
-        self.owner: Optional[ValueWidget[T]] = kwargs.get('parent')
+        self.owner: Optional[Fidget[T]] = kwargs.get('parent')
 
         self.init_ui()
 
@@ -660,12 +663,12 @@ class PlaintextEditWidget(Generic[T], ValueWidget[T]):
     def parse(self):
         parser: PlaintextParser = self.parse_combo.currentData()
         if not parser:
-            raise ParseError('no parser configured')
+            raise ParseError('no parser configured', offender=self.parse_combo)
 
         try:
             return parser(self.parse_edit.toPlainText())
         except PlaintextParseError as e:
-            raise ParseError(...) from e
+            raise ParseError(offender=self.parse_edit) from e
 
     def load_file(self, *args):
         filename, _ = QFileDialog.getOpenFileName(self, 'open file', filter='text files (*.txt *.csv);;all files (*.*)')

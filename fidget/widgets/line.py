@@ -4,12 +4,12 @@ import re
 
 from fidget.backend.QtWidgets import QLineEdit, QHBoxLayout
 
-from fidget.core import ValueWidget, inner_plaintext_parser, ValidationError
+from fidget.core import Fidget, inner_plaintext_parser, ValidationError
 
 from fidget.widgets.__util__ import optional_valid
 
 
-class LineEdit(ValueWidget[str]):
+class FidgetLineEdit(Fidget[str]):
     """
     A string ValueWidget, in the form of a QLineEdit
     """
@@ -46,13 +46,15 @@ class LineEdit(ValueWidget[str]):
 
             layout.addWidget(self.edit)
 
+        self.setFocusProxy(self.edit)
+
     def parse(self):
         return self.edit.text()
 
     def validate(self, value):
         super().validate(value)
         if self.pattern and not self.pattern.fullmatch(value):
-            raise ValidationError(f'value must match pattern {self.pattern}')
+            raise ValidationError(f'value must match pattern {self.pattern}', offender=self.edit)
 
     @inner_plaintext_parser
     def raw_text(self, v):
@@ -66,7 +68,7 @@ if __name__ == '__main__':
     from fidget.backend.QtWidgets import QApplication
 
     app = QApplication([])
-    w = LineEdit('sample', pattern='(a[^a]*a|[^a])*', make_plaintext=True)
+    w = FidgetLineEdit('sample', pattern='(a[^a]*a|[^a])*', make_plaintext=True)
     w.show()
     res = app.exec_()
     print(w.value())

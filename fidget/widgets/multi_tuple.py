@@ -6,31 +6,33 @@ from itertools import chain
 
 from fidget.backend.QtWidgets import QVBoxLayout, QFrame, QBoxLayout
 
-from fidget.core import ValueWidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
-    PlaintextPrintError, PlaintextParseError, ValueWidgetTemplate, explicit
+from fidget.core import Fidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
+    PlaintextPrintError, PlaintextParseError, FidgetTemplate, explicit
 from fidget.core.__util__ import first_valid
 
-from fidget.widgets.idiomatic_inner import MultiWidgetWrapper
+from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
 from fidget.widgets.__util__ import only_valid
 
 T = TypeVar('T')
 Template = Union[
-    ValueWidgetTemplate[T],
-    ValueWidget[T]
+    FidgetTemplate[T],
+    Fidget[T]
 ]
 
 
-class TupleWidget(MultiWidgetWrapper[Any, Tuple]):
+# todo resume documentation
+
+class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
     def __init__(self, title, inner_templates: Iterable[Template] = None, frame_style=None,
                  layout_cls: Type[QBoxLayout] = None, **kwargs):
 
         self.inner_templates = tuple(
             t.template_of() for t in only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES)
         )
-        ValueWidgetTemplate.extract_default(*self.inner_templates, upper_space=self, sink=kwargs)
+        FidgetTemplate.extract_default(*self.inner_templates, upper_space=self, sink=kwargs)
 
         super().__init__(title, **kwargs)
-        self.inners: Sequence[ValueWidget] = None
+        self.inners: Sequence[Fidget] = None
 
         self.init_ui(frame_style=frame_style, layout_cls=layout_cls)
 
@@ -70,7 +72,7 @@ class TupleWidget(MultiWidgetWrapper[Any, Tuple]):
             try:
                 value = subwidget.parse()
             except ParseError as e:
-                raise ParseError('error parsing ' + subwidget.title) from e
+                raise ParseError('error parsing ' + subwidget.title, offender=subwidget) from e
             d.append(value)
         return tuple(d)
 
@@ -81,14 +83,14 @@ class TupleWidget(MultiWidgetWrapper[Any, Tuple]):
             try:
                 subwidget.validate(v)
             except ValidationError as e:
-                raise ValidationError('error validating ' + subwidget.title) from e
+                raise ValidationError('error validating ' + subwidget.title, offender=subwidget) from e
 
     @inner_plaintext_parser
     def from_json(self, v: str, exact_len=True):
         try:
             d = json.loads(v)
         except json.JSONDecodeError as e:
-            raise PlaintextParseError(...) from e
+            raise PlaintextParseError() from e
 
         if not isinstance(d, list):
             raise PlaintextParseError(f'json is a {type(d).__name__} instead of list')
@@ -145,10 +147,10 @@ class TupleWidget(MultiWidgetWrapper[Any, Tuple]):
 
 if __name__ == '__main__':
     from fidget.backend import QApplication, QHBoxLayout
-    from fidget.widgets import IntEdit
+    from fidget.widgets import FidgetInt
 
 
-    class PointWidget(TupleWidget):
+    class PointWidget(FidgetTuple):
         MAKE_PLAINTEXT = True
         MAKE_INDICATOR = True
         MAKE_TITLE = True
@@ -156,8 +158,8 @@ if __name__ == '__main__':
         LAYOUT_CLS = QHBoxLayout
 
         INNER_TEMPLATES = [
-            IntEdit.template('X', make_indicator=False),
-            IntEdit.template('Y', make_indicator=False)
+            FidgetInt.template('X', make_indicator=False),
+            FidgetInt.template('Y', make_indicator=False)
         ]
 
 

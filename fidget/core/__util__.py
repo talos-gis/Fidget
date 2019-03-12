@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fidget.backend.QtWidgets import QApplication
+
 from typing import Union, Callable, Any, Tuple, Type, TypeVar, Optional
 
 from functools import wraps
@@ -7,12 +9,11 @@ from functools import wraps
 T = TypeVar('T')
 
 
-# todo also pass through unparameterised raise
 def error_details(e: Exception):
     ret = []
     type_names = []
     while e:
-        if e.args != (...,):
+        if e.args != ():
             ret.append(f'{type(e).__name__}: {e}')
         type_names.append(type(e).__name__)
         e = e.__cause__
@@ -24,11 +25,20 @@ def error_details(e: Exception):
 def error_tooltip(e: Exception):
     ret = None
     while e:
-        if e.args == (...,):
+        if e.args == ():
             ret = f'{type(e).__name__}: ...'
             e = e.__cause__
             continue
         return f'{type(e).__name__}: {e}'
+    return ret
+
+
+def error_attr(e: Exception, attr_name: str, default=None):
+    ret = default
+    while e:
+        if hasattr(e, attr_name):
+            ret = getattr(e, attr_name)
+        e = e.__cause__
     return ret
 
 
@@ -40,7 +50,7 @@ def exc_wrap(to_raise: Type[Exception]):
                 try:
                     return func(*args, **kwargs)
                 except exc_cls as e:
-                    raise to_raise(...) from e
+                    raise to_raise from e
 
             return ret
 

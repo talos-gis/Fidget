@@ -1,6 +1,6 @@
 from typing import TypeVar, Generic, Iterable
 
-from fidget.core import ValueWidget, ValueWidgetTemplate
+from fidget.core import Fidget, FidgetTemplate
 
 """
 Idiomatic inner widgets are ValidWidget classes defined with the inner_widget decorator inside of wrapper ValidWidget
@@ -8,7 +8,7 @@ classes. If an inner widget is defined, it's template becomes the default inner 
 """
 
 
-def inner_widget(*args, **kwargs):
+def inner_fidget(*args, **kwargs):
     """
     define a ValidWidget class as an idiomatic inner widget
     :param args: arguments forwarded to the template
@@ -24,7 +24,7 @@ def inner_widget(*args, **kwargs):
 
 def get_idiomatic_inner_template(cls):
     """
-    get all the idiomatic inner widgets defined in a class
+    get all the idiomatic inner fidget templates defined in a class
     """
     for v in cls.__dict__.values():
         i = getattr(v, '__is_inner__', False)
@@ -36,10 +36,11 @@ T = TypeVar('T')
 I = TypeVar('I')
 
 
-class SingleWidgetWrapper(Generic[I, T], ValueWidget[T]):
+class SingleFidgetWrapper(Generic[I, T], Fidget[T]):
     """
     A superclass for wrapping a single template
     """
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         idiomatic_inners = get_idiomatic_inner_template(cls)
@@ -61,13 +62,14 @@ class SingleWidgetWrapper(Generic[I, T], ValueWidget[T]):
         if inner_template:
             cls.INNER_TEMPLATE = inner_template
 
-    INNER_TEMPLATE: ValueWidgetTemplate[T]
+    INNER_TEMPLATE: FidgetTemplate[I]
 
 
-class MultiWidgetWrapper(Generic[I, T], ValueWidget[T]):
+class MultiFidgetWrapper(Generic[I, T], Fidget[T]):
     """
     A superclass for wrapping multiple templates
     """
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         idiomatic_inners = list(get_idiomatic_inner_template(cls))
@@ -77,4 +79,4 @@ class MultiWidgetWrapper(Generic[I, T], ValueWidget[T]):
 
             cls.INNER_TEMPLATES = idiomatic_inners
 
-    INNER_TEMPLATES: Iterable[ValueWidgetTemplate[I]] = None
+    INNER_TEMPLATES: Iterable[FidgetTemplate[I]]

@@ -5,20 +5,20 @@ from typing import TypeVar, Generic, Callable, Optional
 from functools import wraps
 from fidget.backend.QtWidgets import QHBoxLayout
 
-from fidget.core import ValueWidget, ParseError, PlaintextParseError, ValueWidgetTemplate
+from fidget.core import Fidget, ParseError, PlaintextParseError, FidgetTemplate
 
-from fidget.widgets.idiomatic_inner import SingleWidgetWrapper
+from fidget.widgets.idiomatic_inner import SingleFidgetWrapper
 from fidget.widgets.__util__ import is_trivial_printer, only_valid
 
 T = TypeVar('T')
 F = TypeVar('F')
 
 
-class ConverterWidget(Generic[F, T], SingleWidgetWrapper[F, T]):
+class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
     """
     A ValueWidget wrapper that only converts the value to another type
     """
-    def __init__(self, inner_template: ValueWidgetTemplate[F] = None,
+    def __init__(self, inner_template: FidgetTemplate[F] = None,
                  converter_func: Callable[[F], T] = None,
                  back_converter_func: Optional[Callable[[T], F]] = None,
                  **kwargs):
@@ -46,13 +46,13 @@ class ConverterWidget(Generic[F, T], SingleWidgetWrapper[F, T]):
         super().__init__(inner_template.title, **kwargs)
 
         self.inner_template = inner_template
-        self.inner: ValueWidget[F] = None
+        self.inner: Fidget[F] = None
         self.converter_func = converter_func
         self.back_converter_func = back_converter_func
 
         self.init_ui()
 
-    INNER_TEMPLATE: ValueWidgetTemplate[F] = None
+    INNER_TEMPLATE: FidgetTemplate[F] = None
 
     def init_ui(self):
         super().init_ui()
@@ -83,6 +83,7 @@ class ConverterWidget(Generic[F, T], SingleWidgetWrapper[F, T]):
             self.make_indicator = True
 
         self.inner.on_change.connect(self.change_value)
+        self.setFocusProxy(self.inner)
 
     def provided_pre(self, *args, **kwargs):
         return self.inner.provided_pre(*args, **kwargs)
@@ -117,7 +118,7 @@ class ConverterWidget(Generic[F, T], SingleWidgetWrapper[F, T]):
                 try:
                     return self.convert(f)
                 except ParseError as e:
-                    raise PlaintextParseError(...) from e
+                    raise PlaintextParseError() from e
 
             yield p
 
@@ -155,8 +156,8 @@ class ConverterWidget(Generic[F, T], SingleWidgetWrapper[F, T]):
         return ret.template(**template_args)
 
 
-@ConverterWidget.template_class
-class ConverterWidgetTemplate(Generic[T], ValueWidgetTemplate[T]):
+@FidgetConverter.template_class
+class ConverterWidgetTemplate(Generic[T], FidgetTemplate[T]):
     @property
     def title(self):
         it = self._inner_template()
@@ -175,13 +176,13 @@ class ConverterWidgetTemplate(Generic[T], ValueWidgetTemplate[T]):
 if __name__ == '__main__':
     from fidget.backend import QApplication
     from fidget import wrap_parser
-    from fidget.widgets import LineEdit, OptionalValueWidget
+    from fidget.widgets import FidgetLineEdit, FidgetOptional
 
     app = QApplication([])
-    w = ConverterWidget(LineEdit('sample', pattern='(1[^1]*1|[^1])*', make_plaintext=True),
+    w = FidgetConverter(FidgetLineEdit('sample', pattern='(1[^1]*1|[^1])*', make_plaintext=True),
                         converter_func=wrap_parser(ValueError, int),
                         back_converter_func=str, make_indicator=True)
-    w = OptionalValueWidget(w, make_title=True)
+    w = FidgetOptional(w, make_title=True)
     w.show()
     res = app.exec_()
     print(w.value())

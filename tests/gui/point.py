@@ -2,7 +2,7 @@ from typing import Tuple, Match
 
 from fidget.backend.QtWidgets import QLineEdit, QHBoxLayout
 
-from fidget.core import ValueWidget, regex_parser, json_parser, PlaintextParseError, ParseError, wrap_plaintext_parser
+from fidget.core import Fidget, regex_parser, json_parser, PlaintextParseError, ParseError, wrap_plaintext_parser
 
 from tests.gui.__util__ import test_as_main
 
@@ -43,7 +43,7 @@ def json_dict(m: dict):
 
 
 @test_as_main('sample', help='sample help')
-class PointWidget(ValueWidget[Tuple[float, float]]):
+class PointWidget(Fidget[Tuple[float, float]]):
     MAKE_TITLE = MAKE_PLAINTEXT = MAKE_INDICATOR = True
 
     def __init__(self, *args, **kwargs):

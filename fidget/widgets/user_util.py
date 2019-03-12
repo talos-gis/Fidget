@@ -1,18 +1,17 @@
-from typing import Callable, TypeVar, Generic, Type, Union
+from typing import TypeVar, Generic, Union
 
 from functools import partial
 
-from fidget.core import format_printer, regex_parser, PlaintextParseError, wrap_plaintext_parser, ValueWidget, \
-    ValueWidgetTemplate, inner_plaintext_parser, ParseError
+from fidget.core import format_printer, regex_parser, PlaintextParseError, wrap_plaintext_parser, Fidget, \
+    FidgetTemplate, inner_plaintext_parser, ParseError
 
-from fidget.widgets.line import LineEdit
-from fidget.widgets.converter import ConverterWidget
-from fidget.widgets.confirmer import ConfirmValueWidget
+from fidget.widgets.line import FidgetLineEdit
+from fidget.widgets.converter import FidgetConverter
 
 T = TypeVar('T')
 
 
-class SimpleEdit(Generic[T], ConverterWidget[str, T]):
+class SimpleEdit(Generic[T], FidgetConverter[str, T]):
     _func = inner_plaintext_parser(staticmethod(wrap_plaintext_parser(ValueError, partial(int, base=0))))
     MAKE_PLAINTEXT = MAKE_INDICATOR = False
 
@@ -35,20 +34,20 @@ class SimpleEdit(Generic[T], ConverterWidget[str, T]):
         try:
             return parser(v)
         except PlaintextParseError as e:
-            raise ParseError(...) from e
+            raise ParseError(offender=self.inner) from e
 
-    line_edit_cls: Union[ValueWidgetTemplate[str], ValueWidget[str]] = LineEdit.template()
+    line_edit_cls: Union[FidgetTemplate[str], Fidget[str]] = FidgetLineEdit.template()
 
-    _template_class = ValueWidget._template_class
+    _template_class = Fidget._template_class
 
     def template_of(self):
-        return ValueWidget.template_of(self)
+        return Fidget.template_of(self)
 
     def plaintext_parsers(self):
-        return ValueWidget.plaintext_parsers(self)
+        return Fidget.plaintext_parsers(self)
 
 
-class IntEdit(SimpleEdit[int]):
+class FidgetInt(SimpleEdit[int]):
     def plaintext_printers(self):
         yield from super().plaintext_printers()
         yield hex
@@ -58,7 +57,7 @@ class IntEdit(SimpleEdit[int]):
         yield format_printer('X')
 
 
-class FloatEdit(SimpleEdit[float]):
+class FidgetFloat(SimpleEdit[float]):
     _func = inner_plaintext_parser(staticmethod(wrap_plaintext_parser(ValueError, float)))
 
     @inner_plaintext_parser
@@ -68,7 +67,7 @@ class FloatEdit(SimpleEdit[float]):
         try:
             return float(m[1]) / 100
         except ValueError as e:
-            raise PlaintextParseError(...) from e
+            raise PlaintextParseError() from e
 
     @inner_plaintext_parser
     @staticmethod
@@ -81,12 +80,12 @@ class FloatEdit(SimpleEdit[float]):
             n = float(n)
             d = float(d)
         except ValueError as e:
-            raise PlaintextParseError(...) from e
+            raise PlaintextParseError() from e
 
         try:
             return n / d
         except ValueError as e:
-            raise PlaintextParseError(...) from e
+            raise PlaintextParseError() from e
 
     def plaintext_printers(self):
         yield from super().plaintext_printers()
@@ -96,7 +95,7 @@ class FloatEdit(SimpleEdit[float]):
         yield format_printer('%')
 
 
-class ComplexEdit(SimpleEdit[complex]):
+class FidgetComplex(SimpleEdit[complex]):
     _func = inner_plaintext_parser(staticmethod(wrap_plaintext_parser(ValueError, complex)))
 
 
@@ -111,7 +110,7 @@ if __name__ == '__main__':
     from fidget.backend.QtWidgets import QApplication
 
     app = QApplication([])
-    w = IntEdit('sample', make_plaintext=True, make_indicator=True)
+    w = FidgetInt('sample', make_plaintext=True, make_indicator=True)
     w.show()
     res = app.exec_()
     print(w.value())
