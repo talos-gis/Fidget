@@ -5,8 +5,7 @@ from typing import TypeVar, Optional
 from pathlib import Path
 import os
 
-from fidget.backend.QtWidgets import QLabel
-from fidget.backend.QtCore import Qt
+from fidget.core import Fidget
 
 T = TypeVar('T')
 
@@ -43,50 +42,46 @@ def filename_valid(path: Path):
         raise NotImplementedError
 
 
+_trivial_printers = frozenset(Fidget.plaintext_printers(None))
+
+
 def is_trivial_printer(p):
     """
     check if a printer is a trivial printer
     :param p: the printer to check
     """
-    return p in (str, repr)
+    return p in _trivial_printers
 
 
-def only_valid(**kwargs: Optional[T]) -> T:
+def only_valid(_invalid=None,**kwargs: Optional[T]) -> T:
     """
     check that only one of the arguments is not None, and return its value
     :return: the value of the only not-None argument
     """
-    valid = None
+    valid = _invalid
     for k, v in kwargs.items():
-        if v is None:
+        if v is _invalid:
             continue
-        if valid is not None:
+        if valid is not _invalid:
             raise TypeError(f'both {valid[0]} and {k} provided')
         valid = k, v
-    if valid is None:
+    if valid is _invalid:
         raise TypeError(f'none of {", ".join(kwargs.keys())} provided')
     return valid[1]
 
 
-def optional_valid(**kwargs: Optional[T]) -> Optional[T]:
+def optional_valid(_invalid=None ,**kwargs: Optional[T]) -> Optional[T]:
     """
     check at most one of the arguments is not None, and return its value
     :return: the value of the only not-None argument, or None
     """
-    valid = None
+    valid = _invalid
     for k, v in kwargs.items():
-        if v is None:
+        if v is _invalid:
             continue
-        if valid is not None:
+        if valid is not _invalid:
             raise TypeError(f'both {valid[0]} and {k} provided')
         valid = k, v
-    if valid is None:
+    if valid is _invalid:
         return None
     return valid[1]
-
-
-def link_to(text: str, url: str):
-    ret = QLabel(f'''<a href='{url}'>{text}</a>''')
-    ret.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
-    ret.setOpenExternalLinks(True)
-    return ret

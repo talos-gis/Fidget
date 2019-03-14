@@ -9,7 +9,7 @@ setuptools.setup(
     packages=['fidget', 'fidget.widgets', 'fidget.backend'],
     extras_require={
         'PyQt': ['PyQt5'],
-        'PySide': ['PySide']
+        'PySide': ['PySide2']
     },
     python_requires='>=3.7.0',
     include_package_data=True,

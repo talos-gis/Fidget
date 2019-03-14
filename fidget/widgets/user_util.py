@@ -2,63 +2,13 @@ from typing import TypeVar, Generic
 
 from functools import partial
 
-from fidget.backend.QtCore import Qt
-
 from fidget.core import format_printer, regex_parser, PlaintextParseError, wrap_plaintext_parser, Fidget, \
-    TemplateLike, inner_plaintext_parser, ParseError, explicit, PlaintextPrintError
+    TemplateLike, inner_plaintext_parser, ParseError
 
 from fidget.widgets.line import FidgetLineEdit
 from fidget.widgets.converter import FidgetConverter
-from fidget.widgets.confirmer import FidgetQuestion
-from fidget.widgets.__util__ import link_to
 
 T = TypeVar('T')
-
-# todo shortcut to the python format spec mini-language
-format_spec_question_template = FidgetQuestion.template(
-    FidgetLineEdit.template('format specification'),
-    window_modality=Qt.ApplicationModal, cancel_value=None,
-    post_widget=partial(link_to, 'python format mini-language specifications',
-                        r'https://docs.python.org/3/library/string.html#format-specification-mini-language')
-)
-
-
-@explicit
-def format_input(v):
-    format_spec = format_spec_question_template.instance().exec_()
-    if not format_spec.is_ok():
-        raise PlaintextPrintError from format_spec.exception
-    format_spec: str = format_spec.value
-    if format_spec is None:
-        raise PlaintextPrintError('format_spec not provided')
-
-    try:
-        return format(v, format_spec)
-    except ValueError as e:
-        raise PlaintextPrintError from e
-
-
-formatted_string_question_template = FidgetQuestion.template(
-    FidgetLineEdit.template('format specification'),
-    window_modality=Qt.ApplicationModal, cancel_value=None,
-    post_widget=partial(link_to, 'python formatted string specifications',
-                        r'https://docs.python.org/3/library/string.html#format-string-syntax')
-)
-
-
-@explicit
-def formatted_string(v):
-    formatted_string_value = formatted_string_question_template.instance().exec_()
-    if not formatted_string_value.is_ok():
-        raise PlaintextPrintError from formatted_string_value.exception
-    formatted_string_value: str = formatted_string_value.value
-    if formatted_string_value is None:
-        raise PlaintextPrintError('formatted string not provided')
-
-    try:
-        return formatted_string_value.format(v)
-    except (ValueError, AttributeError, LookupError) as e:
-        raise PlaintextPrintError from e
 
 
 class SimpleEdit(Generic[T], FidgetConverter[str, T]):
@@ -99,8 +49,6 @@ class SimpleEdit(Generic[T], FidgetConverter[str, T]):
     # todo these should really be standard (somehow...)
     def plaintext_printers(self):
         yield from super().plaintext_printers()
-        yield format_input
-        yield formatted_string
 
 
 class FidgetInt(SimpleEdit[int]):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from fidget.backend.QtWidgets import QApplication
+from fidget.backend.QtWidgets import QLabel
+from fidget.backend.QtCore import Qt
 
 from typing import Union, Callable, Any, Tuple, Type, TypeVar, Optional
 
@@ -71,9 +72,9 @@ def exc_wrap(to_raise: Type[Exception]):
     return ret
 
 
-def first_valid(**kwargs: Optional[T]) -> T:
+def first_valid(_invalid=None, **kwargs: Optional[T]) -> T:
     try:
-        return next(a for a in kwargs.values() if a is not None)
+        return next(a for a in kwargs.values() if a is not _invalid)
     except StopIteration as e:
         raise TypeError(f'none of {", ".join(kwargs.keys())} provided') from e
 
@@ -83,3 +84,10 @@ def shorten(s: str, width: int, filler='...'):
         return s
     half_width = (width - len(filler)) // 2
     return s[:half_width] + filler + s[-half_width:]
+
+
+def link_to(text: str, url: str):
+    ret = QLabel(f'''<a href='{url}'>{text}</a>''')
+    ret.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
+    ret.setOpenExternalLinks(True)
+    return ret

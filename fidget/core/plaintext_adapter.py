@@ -2,8 +2,13 @@ from typing import TypeVar, Union, Pattern, Callable, Any, Match, Iterable, Tupl
 
 import re
 import json
-from functools import wraps, update_wrapper
+from functools import wraps
+from textwrap import indent
 
+from fidget.backend.QtWidgets import QDialog
+
+from fidget.core.primitive_questions import FormatSpecQuestion, FormattedStringQuestion, ExecStringQuestion, \
+    EvalStringQuestion
 from fidget.core.__util__ import exc_wrap
 
 T = TypeVar('T')
@@ -178,3 +183,97 @@ def explicit(func):
 
     func.__explicit__ = True
     return func
+
+
+def explicits_last(it):
+    """
+    sort between explicit and non-explicit elements, returning the explicit elements last, with an indicator
+    """
+    explcits = []
+    for i in it:
+        if getattr(i, '__explicit__', False):
+            explcits.append(i)
+        else:
+            yield i, False
+    for e in explcits:
+        yield e, True
+
+
+@explicit
+def format_spec_input_printer(v):
+    instance = FormatSpecQuestion.instance()
+
+    result = instance.exec_()
+    if result == QDialog.Rejected:
+        raise PlaintextPrintError("format spec cancelled")
+    format_spec = instance.ret
+
+    try:
+        return format(v, format_spec)
+    except ValueError as e:
+        raise PlaintextPrintError from e
+
+
+format_spec_input_printer.__name__ = 'format(...)'
+
+
+@explicit
+def formatted_string_input_printer(v):
+    instance = FormattedStringQuestion.instance()
+
+    if instance.exec_() == QDialog.Rejected:
+        raise PlaintextPrintError("formatted string cancelled")
+    formatted_string = instance.ret
+
+    try:
+        return formatted_string.format(v)
+    except (ValueError, AttributeError, LookupError) as e:
+        raise PlaintextPrintError from e
+
+
+formatted_string_input_printer.__name__ = 'formatted_string(...)'
+
+
+@explicit
+def exec_printer(v):
+    instance = ExecStringQuestion.instance()
+    if instance.exec_() == QDialog.Rejected:
+        raise PlaintextPrintError('exec cancelled')
+    script = instance.ret
+    script = """def main(value):\n""" + indent(script, '\t')
+    try:
+        globs = {}
+        exec(script, globs)
+    except Exception as e:
+        raise PlaintextPrintError from e
+
+    if 'main' not in globs:
+        raise PlaintextParseError('main function not found') from KeyError('main')
+
+    try:
+        ret = globs['main'](v)
+    except Exception as e:
+        raise PlaintextPrintError from e
+
+    return str(ret)
+
+
+exec_printer.__name__ = "exec"
+
+
+@explicit
+def eval_printer(v):
+    instance = EvalStringQuestion.instance()
+    if instance.exec_() == QDialog.Rejected:
+        raise PlaintextPrintError('eval cancelled')
+    script = instance.ret
+
+    try:
+        ret = eval(script, {'value': v})
+    except Exception as e:
+        raise PlaintextPrintError from e
+
+    return str(ret)
+
+
+eval_printer.__name__ = "eval"

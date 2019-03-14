@@ -14,12 +14,11 @@ from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
 from fidget.widgets.__util__ import only_valid
 
 
-# todo resume documentation
-
 class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
     """
     A Fidget that wraps multiple Fidgets into a tuple
     """
+
     def __init__(self, title, inner_templates: Iterable[TemplateLike] = None, frame_style=None,
                  layout_cls: Type[QBoxLayout] = None, **kwargs):
         """

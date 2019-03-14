@@ -13,7 +13,9 @@ from fidget.backend.QtWidgets import QWidget, QPlainTextEdit, QPushButton, QComb
 from fidget.backend.QtCore import Qt, pyqtSignal, __backend__
 
 from fidget.core.plaintext_adapter import PlaintextParseError, PlaintextPrintError, \
-    join_parsers, join_printers, PlaintextParser, PlaintextPrinter
+    join_parsers, join_printers, PlaintextParser, PlaintextPrinter,\
+    format_spec_input_printer, formatted_string_input_printer, exec_printer, eval_printer,\
+    explicits_last
 from fidget.core.fidget_value import FidgetValue, BadValue, GoodValue, ParseError, ValidationError
 from fidget.core.__util__ import error_details, first_valid, error_attrs
 
@@ -293,9 +295,14 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         """
         :return: an iterator of plaintext printers for the widget
         """
-        yield from self._inner_plaintext_printers()
+        if getattr(self, '_inner_plaintext_printers', None):
+            yield from self._inner_plaintext_printers()
         yield str
         yield repr
+        yield format_spec_input_printer
+        yield formatted_string_input_printer
+        yield eval_printer
+        yield exec_printer
 
     def plaintext_parsers(self) -> Iterable[PlaintextParser[T]]:
         """
@@ -651,13 +658,13 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
 
         self.parse_edit = self._ShiftEnterIgnoringPlainTextEdit()
         self.parse_edit.textChanged.connect(self.change_value)
-        self.print_combo.currentIndexChanged[int].connect(self.update_print)
+        self.print_combo.activated.connect(self.update_print)
         parse_layout.addWidget(self.parse_edit)
 
         parse_extras_layout = QGridLayout()
 
         self.parse_combo = QComboBox()
-        self.parse_combo.currentIndexChanged[int].connect(self.change_value)
+        self.parse_combo.activated.connect(self.change_value)
         parse_extras_layout.addWidget(self.parse_combo, 0, 0)
 
         if self.indicator_label:
@@ -724,7 +731,7 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
                 try:
                     text = printer(self.current_value)
                 except PlaintextPrintError as e:
-                    text = f'<printer error: {e}>'
+                    text = f'<printer error>\n{error_details(e)}'
 
         self.print_edit.setPlainText(text)
 
@@ -763,13 +770,14 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
             else:
                 self.print_combo.setVisible(False)
 
-            for printer in printers:
+            for printer, is_explicit in explicits_last(printers):
                 name = printer.__name__
-                if getattr(printer, '__explicit__', False):
+                if is_explicit:
                     name += '*'
                 self.print_combo.addItem(name, printer)
 
             self.print_combo.setCurrentIndex(combo_index)
+            self.print_combo.activated[int].emit(combo_index)
 
         parsers = list(self.owner.plaintext_parsers())
         if not parsers:
@@ -796,12 +804,13 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
             else:
                 self.parse_combo.setVisible(False)
 
-            for parser in parsers:
+            for parser, is_explicit in explicits_last(parsers):
                 name = parser.__name__
-                if getattr(parser, '__explicit__', False):
+                if is_explicit:
                     name += '*'
                 self.parse_combo.addItem(name, parser)
             self.parse_combo.setCurrentIndex(combo_index)
+            self.parse_combo.activated[int].emit(combo_index)
 
         if not printers and not parsers:
             raise ValueError('plaintext edit widget prepped for owner without any plaintext adapters')

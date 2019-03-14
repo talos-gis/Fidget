@@ -8,6 +8,7 @@ from fidget.widgets.file_path import FidgetFilePath
 from fidget.widgets.idiomatic_inner import inner_fidget
 from fidget.widgets.label import FidgetLabel
 from fidget.widgets.line import FidgetLineEdit
+from fidget.widgets.minimalist import FidgetMinimal
 from fidget.widgets.optional import FidgetOptional
 from fidget.widgets.stacked import FidgetStacked
 from fidget.widgets.multi_tuple import FidgetTuple
