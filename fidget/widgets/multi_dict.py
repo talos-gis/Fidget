@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from typing import Union, Mapping, Iterable, Tuple, TypeVar, Dict, Type, Any
-import json
 
 from fidget.backend.QtWidgets import QVBoxLayout, QFrame, QScrollArea, QWidget, QBoxLayout
 
 from fidget.core import Fidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
-    PlaintextPrintError, PlaintextParseError, FidgetTemplate, explicit, json_parser, TemplateLike
+    PlaintextPrintError, PlaintextParseError, FidgetTemplate, explicit, json_parser, TemplateLike, json_printer
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
@@ -164,6 +163,7 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
         return self.from_json(v, exact=False)
 
     @inner_plaintext_printer
+    @json_printer
     def to_json(self, d: Mapping[str, object]):
         ret = {}
         for k, subwidget in self.inners.items():
@@ -173,11 +173,7 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
             except PlaintextPrintError as e:
                 raise PlaintextPrintError(f'error printing {k}') from e
             ret[k] = s
-
-        try:
-            return json.dumps(ret)
-        except TypeError as e:
-            raise PlaintextPrintError() from e
+        return ret
 
     def plaintext_parsers(self):
         if self.fill:

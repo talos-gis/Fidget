@@ -64,7 +64,7 @@ class FidgetValue(ABC):
         pass
 
     def __str__(self):
-        return f'{type(self).__name__}: {self.short_details}'
+        return f'{type(self).__name__}: {self.details}'
 
 
 class GoodValue(Generic[T], FidgetValue):

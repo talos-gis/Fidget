@@ -1,7 +1,6 @@
 from fidget.backend.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 
-from fidget.core import Fidget
-from fidget.widgets import FidgetInt, FidgetConfirmer, FidgetQuestion
+from fidget.widgets import FidgetInt, FidgetQuestion
 
 from tests.gui.__util__ import test_as_main
 

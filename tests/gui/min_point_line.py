@@ -1,14 +1,14 @@
 from fidget.backend.QtWidgets import QHBoxLayout
 
-from fidget.widgets import FidgetMinimal, FidgetInt, FidgetTuple, inner_fidget
+from fidget.widgets import FidgetMinimal, FidgetInt, FidgetTuple, inner_fidget, SimpleLineEdit
 from tests.gui.__util__ import test_as_main
 
 
 @test_as_main()
 class MinInt(FidgetMinimal):
-    INITIAL_VALUE = (0,0)
     MAKE_TITLE = True
     PRINTER = str
+    OUTER_TEMPLATE = SimpleLineEdit.template('outer', make_indicator=True)
 
     @inner_fidget('sample')
     class _(FidgetTuple):

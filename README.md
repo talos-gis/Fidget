@@ -1,4 +1,4 @@
-#fidget
+#Fidget
 Fidget is an adapter of Qt into a functional-style interface. Fidget can be used seamlessly with PyQt5 and PySide2. Fidget is designed to create an effortless and rich UI for data science and analysis.
 
 ## Concept
@@ -63,7 +63,7 @@ Phew, a lot of this is standard `QWidget` usage, so we'll just go over the new b
 ```python
 class PointWidget(Fidget[Tuple[float, float]]):
 ```
-Every `Fidget` must extend the `Fidget` class (which extend the `QWidget` class). `Fidget` is a generic type, so it can be parametrized with its value type (in this case, a tuple of `float`s). The generic parameter has no effect on the code.
+Every `Fidget` must extend the `Fidget` class (which extend the `QWidget` class). `Fidget` is a generic type, so it can be parametrized with its value type (in this case, a tuple of `float`s). Like all generic types, the generic parameter has no effect on the code.
 
 ```python
 with self.setup_provided(layout):

@@ -4,8 +4,11 @@ from typing import TypeVar, Optional
 
 from pathlib import Path
 import os
+from functools import wraps, lru_cache
 
-from fidget.core import Fidget
+from fidget.backend.QtWidgets import QWidget
+
+from fidget.core import Fidget, ValidationError
 
 T = TypeVar('T')
 
@@ -53,7 +56,7 @@ def is_trivial_printer(p):
     return p in _trivial_printers
 
 
-def only_valid(_invalid=None,**kwargs: Optional[T]) -> T:
+def only_valid(_invalid=None, **kwargs: Optional[T]) -> T:
     """
     check that only one of the arguments is not None, and return its value
     :return: the value of the only not-None argument
@@ -70,18 +73,66 @@ def only_valid(_invalid=None,**kwargs: Optional[T]) -> T:
     return valid[1]
 
 
-def optional_valid(_invalid=None ,**kwargs: Optional[T]) -> Optional[T]:
+def optional_valid(_invalid=None, **kwargs: Optional[T]) -> Optional[T]:
     """
     check at most one of the arguments is not None, and return its value
     :return: the value of the only not-None argument, or None
     """
-    valid = _invalid
+    valid = None
     for k, v in kwargs.items():
         if v is _invalid:
             continue
         if valid is not _invalid:
             raise TypeError(f'both {valid[0]} and {k} provided')
         valid = k, v
-    if valid is _invalid:
-        return None
+    if valid is None:
+        return _invalid
     return valid[1]
+
+
+def last_focus_proxy(seed: QWidget):
+    """
+    This utility function is because SetTabOrder currently has a bug where it doesn't respect focus proxies, so we
+    dynamically get the focus proxy of a widget
+    """
+    ret = seed
+    while True:
+        focus = ret.focusProxy()
+        if not focus:
+            return ret
+        ret = focus
+
+
+@lru_cache(None)
+def wrap(func, **kwargs):
+    @wraps(func)
+    def ret(*a, **k):
+        return func(*a, **k)
+
+    for k, v in kwargs.items():
+        setattr(ret, k, v)
+
+    return ret
+
+
+def repeat_last(iterable):
+    i = iter(iterable)
+    last = None
+    while True:
+        try:
+            last = next(i)
+        except StopIteration:
+            break
+        yield last
+    while True:
+        yield last
+
+
+def valid_between(min, max):
+    def ret(v):
+        if min is not None and v < min:
+            raise ValidationError(f'value must be at least {min}')
+        if max is not None and v >= max:
+            raise ValidationError(f'value must be less than {max}')
+
+    return ret

@@ -18,6 +18,7 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
     """
     A Fidget wrapper that only converts the value to another type
     """
+
     def __init__(self, inner_template: FidgetTemplate[F] = None,
                  converter_func: Callable[[F], T] = None,
                  back_converter_func: Optional[Callable[[T], F]] = None,
@@ -83,8 +84,9 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
             self.make_plaintext = True
 
         if self.inner.indicator_label:
-            self.title_label.linkActivated.disconnect(self.inner._detail_button_clicked)
-            self.title_label.linkActivated.connect(self._detail_button_clicked)
+            self.inner.indicator_label.linkActivated.disconnect(self.inner._detail_button_clicked)
+            self.inner.indicator_label.linkActivated.connect(self._detail_button_clicked)
+
             self.indicator_label = self.inner.indicator_label
             self.make_indicator = True
 
@@ -144,9 +146,14 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
         else:
             yield from super().plaintext_printers()
 
-    def _fill(self, v: T):
-        f = self.back_convert(v)
-        self.inner.fill(f)
+    NO_FILL = object()
+
+    def _fill(self, v: T = NO_FILL):
+        if v is self.NO_FILL:
+            self.inner.fill()
+        else:
+            f = self.back_convert(v)
+            self.inner.fill(f)
 
     @property
     def fill(self):

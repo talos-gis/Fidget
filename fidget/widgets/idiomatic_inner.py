@@ -62,6 +62,10 @@ class SingleFidgetWrapper(Generic[I, T], Fidget[T]):
         if inner_template:
             cls.INNER_TEMPLATE = inner_template
 
+    def indication_changed(self, value):
+        super().indication_changed(value)
+        self.inner.indication_changed(value)
+
     INNER_TEMPLATE: FidgetTemplate[I]
 
 

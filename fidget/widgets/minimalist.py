@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import TypeVar, Generic
 
-from fidget.backend.QtWidgets import QHBoxLayout, QPushButton, QBoxLayout, QLabel
+from fidget.backend.QtWidgets import QHBoxLayout, QPushButton, QBoxLayout
 
-from fidget.core import FidgetTemplate, TemplateLike, PlaintextPrintError
-from fidget.core.__util__ import first_valid, error_tooltip
+from fidget.core import FidgetTemplate, TemplateLike, Fidget
+from fidget.core.__util__ import first_valid
 
-from fidget.widgets.__util__ import only_valid
+from fidget.widgets.__util__ import only_valid, optional_valid
+from fidget.widgets.label import FidgetLabel
 from fidget.widgets.confirmer import FidgetQuestion
 from fidget.widgets.idiomatic_inner import SingleFidgetWrapper
 
@@ -19,26 +20,29 @@ T = TypeVar('T')
 class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
     NOT_INITIAL = object()
 
-    def __init__(self, inner_template: TemplateLike[T] = None, layout_cls=None, initial_value: T = NOT_INITIAL,
-                 printer=None, **kwargs):
+    def __init__(self, inner_template: TemplateLike[T] = None, outer_template: TemplateLike[T] = None, layout_cls=None,
+                 initial_value: T = NOT_INITIAL, **kwargs):
         inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
 
         super().__init__(inner_template.title, **kwargs)
 
         self.inner_template = inner_template
+        self.outer_template = only_valid(outer_template=outer_template,
+                                         OUTER_TEMPLATE=self.OUTER_TEMPLATE).template_of()
+
+        self.browse_btn: QPushButton = None
 
         self.question: FidgetQuestion[T] = None
-        self.browse_btn: QPushButton = None
-        self.label: QLabel = None
+        self.outer: Fidget[T] = None
 
         self.__value = None
 
         self.init_ui(layout_cls=layout_cls)
 
-        initial_value = first_valid(initial_value=initial_value, INITIAL_VALUE=self.INITIAL_VALUE,
-                                    _invalid=self.NOT_INITIAL)
-        self.printer = first_valid(printer=printer, PRINTER=self.PRINTER)
-        self.fill(initial_value)
+        initial_value = optional_valid(initial_value=initial_value, INITIAL_VALUE=self.INITIAL_VALUE,
+                                       _invalid=self.NOT_INITIAL)
+
+        self.fill_value(initial_value)
 
     def init_ui(self, layout_cls=None, ok_text=None, cancel_text=None, modality=None,
                 pre_widget=None, post_widget=None):
@@ -47,14 +51,16 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
 
         layout: QBoxLayout = layout_cls(self)
         with self.setup_provided(layout):
-            self.label = QLabel('<no value>')
-            layout.addWidget(self.label)
+            self.outer = self.outer_template()
+            self.outer.on_change.connect(self.change_value)
+            layout.addWidget(self.outer)
 
             self.browse_btn = QPushButton('...')
             self.browse_btn.clicked.connect(self._browse_btn_clicked)
             layout.addWidget(self.browse_btn)
 
         self.question = FidgetQuestion(self.inner_template, cancel_value=self.NOT_INITIAL)
+        self.outer.add_plaintext_delegates(self.question)
 
     def _browse_btn_clicked(self, event):
         v = self.question.exec_()
@@ -63,28 +69,29 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
         value = v.value
         if value is self.NOT_INITIAL:
             return
-        self.fill(value)
+
+        self.fill_value(value)
 
     def fill(self, value: T):
-        self.__value = value
-
-        printer = self.printer
-        if printer is ...:
-            printer = self.question.inner.joined_plaintext_printer
-
-        try:
-            t = printer(value)
-        except PlaintextPrintError as e:
-            t = error_tooltip(e)
-
-        self.label.setText(t)
-        self.change_value()
+        if value is self.NOT_INITIAL:
+            self.outer.fill_value()
+        else:
+            self.outer.fill_value(value)
 
     def parse(self):
-        return self.__value
+        return self.outer.parse()
+
+    def indication_changed(self, value):
+        Fidget.indication_changed(self, value)
+
+    def plaintext_parsers(self):
+        yield from self.question.plaintext_parsers()
+
+    def plaintext_printers(self):
+        yield from self.question.plaintext_printers()
 
     INNER_TEMPLATE: FidgetTemplate[T] = None
+    OUTER_TEMPLATE: FidgetTemplate[T] = FidgetLabel.template('outer')
     LAYOUT_CLS = QHBoxLayout
     MAKE_INDICATOR = MAKE_PLAINTEXT = False
     INITIAL_VALUE: T = NOT_INITIAL
-    PRINTER = ...

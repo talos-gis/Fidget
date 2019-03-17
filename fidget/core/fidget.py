@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Generic, TypeVar, Optional, Callable, Tuple, Iterable, Type, Dict, Any, Union
+from typing import Generic, TypeVar, Optional, Callable, Tuple, Iterable, Type, Dict, Any, Union, List
 
 from abc import abstractmethod
 from contextlib import contextmanager
@@ -9,14 +9,15 @@ from functools import partial, wraps, reduce
 from itertools import chain
 
 from fidget.backend.QtWidgets import QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
-    QMessageBox, QFileDialog, QGroupBox, QGridLayout
+    QMessageBox, QFileDialog, QGroupBox, QGridLayout, QDialog, QSizePolicy
 from fidget.backend.QtCore import Qt, pyqtSignal, __backend__
 
 from fidget.core.plaintext_adapter import PlaintextParseError, PlaintextPrintError, \
-    join_parsers, join_printers, PlaintextParser, PlaintextPrinter,\
-    format_spec_input_printer, formatted_string_input_printer, exec_printer, eval_printer,\
+    join_parsers, join_printers, PlaintextParser, PlaintextPrinter, \
+    format_spec_input_printer, formatted_string_input_printer, exec_printer, eval_printer, \
     explicits_last
 from fidget.core.fidget_value import FidgetValue, BadValue, GoodValue, ParseError, ValidationError
+from fidget.core.primitive_questions import FontQuestion
 from fidget.core.__util__ import error_details, first_valid, error_attrs
 
 T = TypeVar('T')
@@ -235,6 +236,9 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         self._joined_plaintext_printer = None
         self._joined_plaintext_parser = None
 
+        self._plaintext_printer_delegates: List[Callable[[], Iterable[PlaintextPrinter[T]]]] = []
+        self._plaintext_parser_delegates: List[Callable[[], Iterable[PlaintextParser[T]]]] = []
+
         if self.auto_func:
             if self.fill is None:
                 raise Exception('auto_func can only be used on a Fidget with an implemented fill method')
@@ -272,6 +276,7 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
                 self.title_label.linkActivated.connect(self._help_clicked)
 
     # implement this method to allow the widget to be filled from outer elements (like plaintext or auto)
+    # note that this function shouldn't be called form outside!, only call fill_value
     fill: Optional[Callable[[Fidget[T], T], None]] = None
 
     @abstractmethod
@@ -295,8 +300,10 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         """
         :return: an iterator of plaintext printers for the widget
         """
-        if getattr(self, '_inner_plaintext_printers', None):
+        if self:
             yield from self._inner_plaintext_printers()
+            for d in self._plaintext_printer_delegates:
+                yield from d()
         yield str
         yield repr
         yield format_spec_input_printer
@@ -309,6 +316,11 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         :return: an iterator of plaintext parsers for the widget
         """
         yield from self._inner_plaintext_parsers()
+        for d in self._plaintext_parser_delegates:
+            yield from d()
+
+    def indication_changed(self, value: Union[GoodValue[T], BadValue]):
+        pass
 
     # endregion
 
@@ -342,6 +354,12 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         if not self._joined_plaintext_printer:
             self._joined_plaintext_printer = join_printers(self.plaintext_printers)
         return self._joined_plaintext_printer
+
+    def implicit_plaintext_parsers(self):
+        return (yield from (p for p in self.plaintext_parsers() if not getattr(p, '__explicit__', False)))
+
+    def implicit_plaintext_printers(self):
+        return (yield from (p for p in self.plaintext_printers() if not getattr(p, '__explicit__', False)))
 
     def provided_pre(self, exclude=()):
         """
@@ -393,7 +411,7 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         """
         if not self.fill:
             raise Exception(f'widget {self} does not have its fill function implemented')
-        return self.fill(self.joined_plaintext_parser(s))
+        self.fill_value(self.joined_plaintext_parser(s))
 
     def value(self) -> Union[GoodValue[T], BadValue]:
         """
@@ -443,6 +461,22 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
     def __str__(self):
         return super().__str__() + ': ' + self.title
 
+    def fill_value(self, *args, **kwargs):
+        with self.suppress_update():
+            return self.fill(*args, **kwargs)
+
+    def add_plaintext_printers_delegate(self, delegate: Callable[[], Iterable[PlaintextPrinter[T]]]):
+        self._plaintext_printer_delegates.append(delegate)
+        self._joined_plaintext_printer = None
+
+    def add_plaintext_parsers_delegate(self, delegate: Callable[[], Iterable[PlaintextParser[T]]]):
+        self._plaintext_parser_delegates.append(delegate)
+        self._joined_plaintext_parser = None
+
+    def add_plaintext_delegates(self, clone: Fidget):
+        self.add_plaintext_parsers_delegate(clone.plaintext_parsers)
+        self.add_plaintext_printers_delegate(clone.plaintext_printers)
+
     # endregion
 
     def _invalidate_value(self):
@@ -462,8 +496,7 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
                 QMessageBox.critical(self, 'error during autofill', str(e))
             return
 
-        with self.suppress_update():
-            self.fill(value)
+        self.fill_value(value)
 
     def _plaintext_btn_click(self):
         """
@@ -493,6 +526,8 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
 
         if self.plaintext_button:
             self.plaintext_button.setEnabled(value.is_ok() or any(self.plaintext_parsers()))
+
+        self.indication_changed(value)
 
     def _reload_value(self):
         """
@@ -614,11 +649,13 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
         self.ok_button: QPushButton = None
         self.apply_button: QPushButton = None
 
+        self.font_button: QPushButton = None
+
         self.parse_widget: QWidget = None
         self.parse_edit: PlaintextEditWidget._ShiftEnterIgnoringPlainTextEdit = None
         self.parse_combo: QComboBox = None
 
-        self.owner: Optional[Fidget[T]] = kwargs.get('parent')
+        self.owner = kwargs.get('parent')
 
         self.init_ui()
 
@@ -682,9 +719,15 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
         self.ok_button.clicked.connect(self.commit_parse)
         parse_extras_layout.addWidget(self.ok_button, 2, 1)
 
+
         parse_layout.addLayout(parse_extras_layout)
 
         master_layout.addWidget(self.parse_widget)
+
+        self.font_button = QPushButton('font...')
+        self.font_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self.font_button.clicked.connect(self._choose_font)
+        master_layout.addWidget(self.font_button)
 
         self.on_change.connect(self._on_value_change)
 
@@ -858,6 +901,19 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
                 if cursor:
                     cursor.setPosition(cursor_pos)
                     self.parse_edit.setTextCursor(cursor)
+
+    def _choose_font(self, arg):
+        instance = FontQuestion.instance()
+        if instance.exec_() == QDialog.Rejected:
+            return
+        font_family, size = instance.ret
+        for edit in (self.parse_edit, self.print_edit):
+            font = edit.document().defaultFont()
+            if font_family:
+                font.setFamily(font_family)
+            if size:
+                font.setPointSize(size)
+            edit.document().setDefaultFont(font)
 
     def keyPressEvent(self, event):
         if (event.modifiers() == Qt.ShiftModifier and event.key() == Qt.Key_Return) \

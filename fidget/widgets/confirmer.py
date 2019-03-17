@@ -6,7 +6,7 @@ from fidget.backend.QtWidgets import QHBoxLayout, QApplication, QPushButton, QVB
     QWidget
 from fidget.backend.QtCore import Qt, QEventLoop
 
-from fidget.core import Fidget, FidgetTemplate, ParseError, TemplateLike
+from fidget.core import Fidget, FidgetTemplate, ParseError, TemplateLike, inner_plaintext_printer, PlaintextPrintError
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.idiomatic_inner import SingleFidgetWrapper
@@ -110,6 +110,8 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
         if modality:
             self.setWindowModality(modality)
 
+        self.add_plaintext_delegates(self.inner)
+
     def parse(self):
         if self.cancel_flag:
             return self.cancel_value
@@ -162,6 +164,12 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
             self.cancel_flag = True
             self.change_value()
         super().closeEvent(event)
+
+    @inner_plaintext_printer
+    def cancel_printer(self, v):
+        if v is self.cancel_value:
+            return str(v)
+        raise PlaintextPrintError('cannot print non-cancel value')
 
 
 class FidgetQuestion(Generic[T, C], FidgetConfirmer[T, C]):

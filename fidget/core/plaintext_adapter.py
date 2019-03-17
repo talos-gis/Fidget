@@ -72,6 +72,14 @@ def json_parser(acceptable_type: Union[Type, Tuple[Type, ...]] = object):
     return ret
 
 
+def json_printer(func):
+    @wraps(func)
+    def ret(*args, **kwargs):
+        return json.dumps(func(*args, **kwargs))
+
+    return ret
+
+
 class JsonParser:
     def __init__(self, inner_func, acceptable_type):
         self.__func__ = inner_func
@@ -103,10 +111,13 @@ def join_parsers(parsers: Callable[[], Iterable[PlaintextParser]]):
     """
 
     def ret(s):
+        seen = set()
         first_error = None
         for p in parsers():
-            if getattr(p, '__explicit__', False):
+            if getattr(p, '__explicit__', False) or p in seen:
                 continue
+
+            seen.add(p)
 
             try:
                 return p(s)
@@ -125,10 +136,13 @@ def join_printers(printers: Callable[[], Iterable[PlaintextPrinter]]):
     """
 
     def ret(s):
+        seen = set()
         first_error = None
         for p in printers():
-            if getattr(p, '__explicit__', False):
+            if getattr(p, '__explicit__', False) or p in seen:
                 continue
+
+            seen.add(p)
 
             try:
                 return p(s)
@@ -176,6 +190,15 @@ def format_printer(format_spec):
     return ret
 
 
+def formatted_string_printer(formatted_string):
+    @wraps(str)
+    def ret(v):
+        return formatted_string.format(v)
+
+    ret.__name__ = f'{formatted_string!r}.format'
+    return ret
+
+
 def explicit(func):
     """
     mark a function as explicit, and return it
@@ -187,14 +210,24 @@ def explicit(func):
 
 def explicits_last(it):
     """
-    sort between explicit and non-explicit elements, returning the explicit elements last, with an indicator
+    sort between explicit and non-explicit elements, returning the explicit elements last, with an indicator,
+     and avoiding duplicate elements
     """
     explcits = []
+    seen = set()
+
     for i in it:
+        if i in seen:
+            continue
+        else:
+            seen.add(i)
+
         if getattr(i, '__explicit__', False):
             explcits.append(i)
         else:
             yield i, False
+
+    del seen
     for e in explcits:
         yield e, True
 

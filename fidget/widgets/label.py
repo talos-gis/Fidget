@@ -2,22 +2,20 @@ from typing import TypeVar, Generic, Tuple, Union
 
 from fidget.backend.QtWidgets import QLabel, QHBoxLayout
 
-from fidget.core import Fidget, inner_plaintext_parser, PlaintextParseError, PlaintextPrintError
+from fidget.core import Fidget, inner_plaintext_parser, PlaintextParseError, PlaintextPrintError, ParseError
 
 T = TypeVar('T')
 
-
-# todo implement fill?
 
 class FidgetLabel(Generic[T], Fidget[T]):
     """
     A Fidget that immutably contains a single value
     """
-    NO_DEFAULT_VALUE = object()
+    NO_VALUE = object()
 
     MAKE_INDICATOR = MAKE_TITLE = MAKE_PLAINTEXT = False
 
-    def __init__(self, title, value: Union[Tuple[str, T], T], **kwargs):
+    def __init__(self, title, value: Union[Tuple[str, T], T] = NO_VALUE, **kwargs):
         """
         :param title: the title
         :param value: the single value to display
@@ -26,9 +24,12 @@ class FidgetLabel(Generic[T], Fidget[T]):
         super().__init__(title, **kwargs)
 
         self.label: QLabel = None
-        self.name, self.names, self.single_value = self._names_and_value(value)
+
+        self.__value = self.NO_VALUE
+        self.names = ()
 
         self.init_ui()
+        self.fill(value)
 
     def init_ui(self):
         super().init_ui()
@@ -36,17 +37,24 @@ class FidgetLabel(Generic[T], Fidget[T]):
         layout = QHBoxLayout(self)
 
         with self.setup_provided(layout):
-            self.label = QLabel(self.name)
+            self.label = QLabel()
             layout.addWidget(self.label)
 
         self.setFocusProxy(self.label)
 
     def parse(self):
-        return self.single_value
+        if self.__value is self.NO_VALUE:
+            raise ParseError('no value is set')
+        return self.__value
 
-    def fill(self, key: Union[T, bool]):
-        if key != self.single_value:
-            raise ValueError('value is not a valid fill value')
+    def fill(self, key: T = NO_VALUE):
+        if key is self.NO_VALUE:
+            name = '<no value>'
+            self.names = ()
+            self.__value = key
+        else:
+            name, self.names, self.__value = self._names_and_value(key)
+        self.label.setText(name)
 
     def _names_and_value(self, value):
         names = []
@@ -64,7 +72,7 @@ class FidgetLabel(Generic[T], Fidget[T]):
 
         names.append(self.title)
 
-        for printer in self.plaintext_printers():
+        for printer in self.implicit_plaintext_printers():
             try:
                 name = printer(value)
             except PlaintextPrintError:

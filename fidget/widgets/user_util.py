@@ -6,12 +6,13 @@ from fidget.core import format_printer, regex_parser, PlaintextParseError, wrap_
     TemplateLike, inner_plaintext_parser, ParseError
 
 from fidget.widgets.line import FidgetLineEdit
+from fidget.widgets.text import FidgetPlainTextEdit
 from fidget.widgets.converter import FidgetConverter
 
 T = TypeVar('T')
 
 
-class SimpleEdit(Generic[T], FidgetConverter[str, T]):
+class SimpleLineEdit(Generic[T], FidgetConverter[str, T]):
     """
     A superclass for processing a single line edit. using the plaintext parsers to convert the value
     """
@@ -46,12 +47,50 @@ class SimpleEdit(Generic[T], FidgetConverter[str, T]):
     def plaintext_parsers(self):
         return Fidget.plaintext_parsers(self)
 
-    # todo these should really be standard (somehow...)
     def plaintext_printers(self):
         yield from super().plaintext_printers()
 
 
-class FidgetInt(SimpleEdit[int]):
+class SimplePlainEdit(Generic[T], FidgetConverter[str, T]):
+    """
+    A superclass for processing a plaintext edit. using the plaintext parsers to convert the value
+    """
+
+    MAKE_PLAINTEXT = MAKE_INDICATOR = False
+
+    def __init__(self, title, **kwargs):
+        line_edit_args = {}
+
+        for k in ('placeholder',):
+            if k in kwargs:
+                line_edit_args[k] = kwargs[k]
+                del kwargs[k]
+
+        super().__init__(self.line_edit_cls.template(title, **line_edit_args), **kwargs)
+
+    def back_convert(self, v: T):
+        printer = self.joined_plaintext_printer
+        return printer(v)
+
+    def convert(self, v: str) -> T:
+        parser = self.joined_plaintext_parser
+        try:
+            return parser(v)
+        except PlaintextParseError as e:
+            raise ParseError(offender=self.inner) from e
+
+    line_edit_cls: TemplateLike[str] = FidgetPlainTextEdit.template()
+
+    _template_class = Fidget._template_class
+
+    def plaintext_parsers(self):
+        return Fidget.plaintext_parsers(self)
+
+    def plaintext_printers(self):
+        yield from super().plaintext_printers()
+
+
+class FidgetInt(SimpleLineEdit[int]):
     """
     A line edit that converts the value to int
     """
@@ -68,7 +107,7 @@ class FidgetInt(SimpleEdit[int]):
         yield format_printer('_X')
 
 
-class FidgetFloat(SimpleEdit[float]):
+class FidgetFloat(SimpleLineEdit[float]):
     """
     A line edit that converts the value to float
     """
@@ -85,7 +124,7 @@ class FidgetFloat(SimpleEdit[float]):
 
     @inner_plaintext_parser
     @staticmethod
-    @regex_parser(r'(?P<num>[0-9]+)\s*/\s*(?P<den>[1-9][0-9]*)')
+    @regex_parser(r'(?P<num>[0-9]+)\s*/\s*(?P<den>[0-9]*[1-9][0-9]*)')
     def ratio(m):
         n = m['num']
         d = m['den']
@@ -109,7 +148,7 @@ class FidgetFloat(SimpleEdit[float]):
         yield format_printer('%')
 
 
-class FidgetComplex(SimpleEdit[complex]):
+class FidgetComplex(SimpleLineEdit[complex]):
     """
     A line edit that converts the value to complex
     """

@@ -2,14 +2,14 @@ from typing import Optional, Pattern, Union, Container
 
 import re
 
-from fidget.backend.QtWidgets import QLineEdit, QHBoxLayout
+from fidget.backend.QtWidgets import QPlainTextEdit, QHBoxLayout
 
 from fidget.core import Fidget, inner_plaintext_parser, ValidationError
 
 from fidget.widgets.__util__ import optional_valid
 
 
-class FidgetLineEdit(Fidget[str]):
+class FidgetPlainTextEdit(Fidget[str]):
     """
     A string Fidget, in the form of a QLineEdit
     """
@@ -40,7 +40,7 @@ class FidgetLineEdit(Fidget[str]):
         self.forbidden_characters = optional_valid(forbidden_characters=forbidden_characters,
                                                    FORBIDDEN_CHARACTERS=self.FORBIDDEN_CHARACTERS)
 
-        self.edit: QLineEdit = None
+        self.edit: QPlainTextEdit = None
 
         self.init_ui(placeholder=placeholder and self.title)
 
@@ -49,7 +49,7 @@ class FidgetLineEdit(Fidget[str]):
         layout = QHBoxLayout(self)
 
         with self.setup_provided(layout):
-            self.edit = QLineEdit()
+            self.edit = QPlainTextEdit()
             if placeholder:
                 self.edit.setPlaceholderText(placeholder)
             self.edit.textChanged.connect(self.change_value)
@@ -59,7 +59,7 @@ class FidgetLineEdit(Fidget[str]):
         self.setFocusProxy(self.edit)
 
     def parse(self):
-        return self.edit.text()
+        return self.edit.toPlainText()
 
     def validate(self, value):
         super().validate(value)
@@ -89,7 +89,7 @@ class FidgetLineEdit(Fidget[str]):
         return v
 
     def fill(self, v: str = ''):
-        self.edit.setText(v)
+        self.edit.setPlainText(v)
 
     def indication_changed(self, value):
         super().indication_changed(value)
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     from fidget.backend.QtWidgets import QApplication
 
     app = QApplication([])
-    w = FidgetLineEdit('sample', pattern='(a[^a]*a|[^a])*', make_plaintext=True)
+    w = FidgetPlainTextEdit('sample', pattern='(a[^a]*a|[^a])*', make_plaintext=True)
     w.show()
     res = app.exec_()
     print(w.value())
