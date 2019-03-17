@@ -62,10 +62,10 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
         owner = self
         scrollable = first_valid(scrollable=scrollable, SCROLLABLE=self.SCROLLABLE)
 
-        if scrollable:
-            owner_layout = QVBoxLayout()
-            owner.setLayout(owner_layout)
+        owner_layout = QVBoxLayout()
+        owner.setLayout(owner_layout)
 
+        if scrollable:
             owner = QScrollArea(owner)
             owner.setWidgetResizable(True)
             owner_layout.addWidget(owner)
@@ -76,7 +76,7 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
         if scrollable:
             owner.setWidget(master)
         else:
-            master.setParent(owner)
+            owner_layout.addWidget(master)
 
         frame = QFrame()
         if frame_style is not None:

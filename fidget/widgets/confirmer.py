@@ -23,11 +23,9 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
     """
     NO_CANCEL: NoReturn = object()
 
-    # todo document pre and post widgets
     def __init__(self, inner_template: TemplateLike[T] = None, layout_cls=None,
                  cancel_value: C = NO_CANCEL, close_on_confirm=None, ok_text=None, cancel_text=None,
-                 window_modality=None, pre_widget: Union[QWidget, Callable[[], QWidget]] = None,
-                 post_widget: Union[QWidget, Callable[[], QWidget]] = None, **kwargs):
+                 window_modality=None, **kwargs):
         """
         :param inner_template: an inner template to wrap
         :param layout_cls: the class of the layout
@@ -55,8 +53,7 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
 
         self.close_on_confirm = first_valid(close_on_confirm=close_on_confirm, CLOSE_ON_CONFIRM=self.CLOSE_ON_CONFIRM)
 
-        self.init_ui(layout_cls=layout_cls, ok_text=ok_text, cancel_text=cancel_text, modality=window_modality,
-                     pre_widget=pre_widget, post_widget=post_widget)
+        self.init_ui(layout_cls=layout_cls, ok_text=ok_text, cancel_text=cancel_text, modality=window_modality)
 
         self._inner_changed()
 
@@ -67,11 +64,8 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
     WINDOW_MODALITY = None
     OK_TEXT = 'OK'
     CANCEL_TEXT = 'Cancel'
-    PRE_WIDGET = None
-    POST_WIDGET = None
 
-    def init_ui(self, layout_cls=None, ok_text=None, cancel_text=None, modality=None,
-                pre_widget=None, post_widget=None):
+    def init_ui(self, layout_cls=None, ok_text=None, cancel_text=None, modality=None):
         super().init_ui()
         layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
         modality = modality or self.WINDOW_MODALITY
@@ -81,10 +75,6 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
         self.inner = self.inner_template()
 
         with self.setup_provided(layout):
-            pre_widget = self.to_widget(optional_valid(pre_widget=pre_widget, PRE_WIDGET=self.PRE_WIDGET))
-            if pre_widget:
-                layout.addWidget(pre_widget)
-
             self.inner.on_change.connect(self._inner_changed)
 
             layout.addWidget(self.inner)
@@ -100,10 +90,6 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
             btn_layout.addWidget(self.ok_button)
 
             layout.addLayout(btn_layout)
-
-            post_widget = self.to_widget(optional_valid(post_widget=post_widget, POST_WIDGET=self.POST_WIDGET))
-            if post_widget:
-                layout.addWidget(post_widget)
 
         self.setFocusProxy(self.inner)
 

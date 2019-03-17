@@ -91,7 +91,7 @@ class FidgetLabel(Generic[T], Fidget[T]):
     def singleton(self, v):
         if v not in self.names:
             raise PlaintextParseError(f'can only parse {self.names}')
-        return self.single_value
+        return self.__value
 
 
 if __name__ == '__main__':

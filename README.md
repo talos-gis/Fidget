@@ -1,4 +1,5 @@
 #Fidget
+
 Fidget is an adapter of Qt into a functional-style interface. Fidget can be used seamlessly with PyQt5 and PySide2. Fidget is designed to create an effortless and rich UI for data science and analysis.
 
 ## Concept

@@ -10,7 +10,7 @@ class MyMatrix(FidgetMatrix[int]):
         pass
     MAKE_TITLE = True
     MAKE_PLAINTEXT = True
-    MAKE_INDICATOR = False
+    MAKE_INDICATOR = True
 
-    ROWS = (2, 1, 10)
-    COLUMNS = (2, 1, 10)
+    ROWS = (1, 1, None)
+    COLUMNS = (2, 1, None)

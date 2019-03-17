@@ -57,9 +57,6 @@ class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
             self.inners = []
             for inner_template in self.inner_templates:
                 inner = inner_template()
-                for p in chain(inner.provided_pre(),
-                               inner.provided_post()):
-                    p.hide()
                 self.inners.append(inner)
                 inner.on_change.connect(self.change_value)
                 layout.addWidget(inner)

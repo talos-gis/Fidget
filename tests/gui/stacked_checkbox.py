@@ -6,8 +6,8 @@ if __name__ == '__main__':
 
     app = QApplication([])
     w = FidgetStacked('number', [
+        FidgetLabel('auto', ('auto', 123456)),
         FidgetInt('raw text'),
-        FidgetLabel('auto', ('auto', 123456))
     ], make_plaintext=True, frame_style=QFrame.Box, selector_cls=FidgetStacked.CheckBoxSelector,
                       layout_cls=QHBoxLayout, make_indicator=False)
     w.show()
