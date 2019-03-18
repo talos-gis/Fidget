@@ -246,7 +246,7 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
         if not self.inners:
             raise ValueError('at least one inner fidget must be provided')
         self.setFocusProxy(
-            next(iter(self.inners))
+            next(iter(self.inners.values()))
         )
 
         frame.setLayout(layout)

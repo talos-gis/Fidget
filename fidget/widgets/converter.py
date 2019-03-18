@@ -139,18 +139,21 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
             yield p
 
     def plaintext_printers(self):
+        def wrap_printer(printer):
+            @wraps(printer)
+            def p(*args, **kwargs):
+                f = self.back_convert(*args, **kwargs)
+                return printer(f)
+
+            return p
+
         if self.back_convert:
             yield from super().plaintext_printers()
             for printer in self.inner.plaintext_printers():
                 if is_trivial_printer(printer):
                     continue
 
-                @wraps(printer)
-                def p(*args, **kwargs):
-                    f = self.back_convert(*args, **kwargs)
-                    return printer(f)
-
-                yield p
+                yield wrap_printer(printer)
         else:
             yield from super().plaintext_printers()
 

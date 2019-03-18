@@ -29,7 +29,7 @@ class FidgetLabel(Generic[T], Fidget[T]):
         self.names = ()
 
         self.init_ui()
-        self.fill(value)
+        self.fill_value(value)
 
     def init_ui(self):
         super().init_ui()
@@ -98,9 +98,9 @@ class FidgetLabel(Generic[T], Fidget[T]):
     def indication_changed(self, value):
         super().indication_changed(value)
         if value.is_ok():
-            self.edit.setStyleSheet('')
+            self.label.setStyleSheet('')
         else:
-            self.edit.setStyleSheet('color: red;')
+            self.label.setStyleSheet('color: red;')
 
 
 if __name__ == '__main__':
