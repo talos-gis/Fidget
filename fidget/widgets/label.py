@@ -7,8 +7,6 @@ from fidget.core import Fidget, inner_plaintext_parser, PlaintextParseError, Pla
 T = TypeVar('T')
 
 
-# todo update indicator
-
 class FidgetLabel(Generic[T], Fidget[T]):
     """
     A Fidget that immutably contains a single value
@@ -43,6 +41,8 @@ class FidgetLabel(Generic[T], Fidget[T]):
             layout.addWidget(self.label)
 
         self.setFocusProxy(self.label)
+
+        return layout
 
     def parse(self):
         if self.__value is self.NO_VALUE:
@@ -94,6 +94,13 @@ class FidgetLabel(Generic[T], Fidget[T]):
         if v not in self.names:
             raise PlaintextParseError(f'can only parse {self.names}')
         return self.__value
+
+    def indication_changed(self, value):
+        super().indication_changed(value)
+        if value.is_ok():
+            self.edit.setStyleSheet('')
+        else:
+            self.edit.setStyleSheet('color: red;')
 
 
 if __name__ == '__main__':

@@ -62,6 +62,8 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
         self.question = FidgetQuestion(self.inner_template, cancel_value=self.NOT_INITIAL)
         self.outer.add_plaintext_delegates(self.question)
 
+        return layout
+
     def _browse_btn_clicked(self, event):
         v = self.question.exec_()
         if not v.is_ok():

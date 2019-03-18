@@ -97,6 +97,7 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
             self.setWindowModality(modality)
 
         self.add_plaintext_delegates(self.inner)
+        return layout
 
     def parse(self):
         if self.cancel_flag:

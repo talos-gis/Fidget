@@ -64,6 +64,8 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
             self.combo_box.currentIndexChanged.connect(self.change_value)
             layout.addWidget(self.combo_box)
 
+            return layout
+
         def parse(self):
             return self.combo_box.currentIndex()
 
@@ -98,6 +100,8 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
             self.radio_buttons = []
 
             layout.addWidget(self.group_box)
+
+            return layout
 
         def parse(self):
             for i, rb in enumerate(self.radio_buttons):
@@ -136,6 +140,8 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
             self.check_box = QCheckBox()
             self.check_box.toggled.connect(self.change_value)
             layout.addWidget(self.check_box)
+
+            return layout
 
         def parse(self):
             ret = int(self.check_box.isChecked())
@@ -237,8 +243,16 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
             layout.addWidget(self.selector)
             layout.addWidget(self.stacked)
 
+        if not self.inners:
+            raise ValueError('at least one inner fidget must be provided')
+        self.setFocusProxy(
+            next(iter(self.inners))
+        )
+
         frame.setLayout(layout)
         master_layout.addWidget(frame)
+
+        return master_layout
 
     def parse(self):
         return self.current_subwidget().parse()

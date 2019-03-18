@@ -103,6 +103,9 @@ class JsonParser:
 
         return ret
 
+    def __call__(self, *args, **kwargs):
+        return self.__func__.__get__(*args, **kwargs)
+
 
 def join_parsers(parsers: Callable[[], Iterable[PlaintextParser]]):
     """

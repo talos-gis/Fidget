@@ -72,6 +72,8 @@ class FidgetEditCombo(Generic[T], Fidget[T]):
             self.combo_box.editTextChanged.connect(self.change_value)
             self.setFocusProxy(self.combo_box)
 
+        return layout
+
     def parse(self):
         cur_text = self.combo_box.currentText()
         _, ret = self._opt_lookup_name.get(cur_text, (-1, self.CONVERT_NAME))

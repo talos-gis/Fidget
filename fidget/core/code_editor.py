@@ -6,7 +6,7 @@ import re
 
 from fidget.backend.QtCore import Qt, QRect, QSize
 from fidget.backend.QtWidgets import QWidget, QPlainTextEdit, QTextEdit
-from fidget.backend.QtGui import QColor, QPainter, QTextFormat
+from fidget.backend.QtGui import QColor, QPainter, QTextFormat, QFontDatabase
 
 from fidget.core.highlighter import Python3Highlighter
 
@@ -32,6 +32,8 @@ class QCodeEditor(QPlainTextEdit):
         self.updateRequest.connect(self.updateLineNumberArea)
         self.cursorPositionChanged.connect(self.highlightCurrentLine)
         self.updateLineNumberAreaWidth(0)
+        font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        self.document().setDefaultFont(font)
 
     def lineNumberAreaWidth(self):
         digits = 1

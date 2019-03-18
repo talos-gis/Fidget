@@ -17,7 +17,9 @@ QCursor: Type[PyQt5.QtGui.QCursor] = _QtGui['QCursor']
 QFontDatabase: Type[PyQt5.QtGui.QFontDatabase] = _QtGui['QFontDatabase']
 QIcon: Type[PyQt5.QtGui.QIcon] = _QtGui['QIcon']
 QPainter: Type[PyQt5.QtGui.QPainter] = _QtGui['QPainter']
+QPixmap: Type[PyQt5.QtGui.QPixmap] = _QtGui['QPixmap']
 QTextFormat: Type[PyQt5.QtGui.QTextFormat] = _QtGui['QTextFormat']
+QValidator: Type[PyQt5.QtGui.QValidator] = _QtGui['QValidator']
 
 
 def __getattr__(name):

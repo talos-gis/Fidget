@@ -1,10 +1,11 @@
-from typing import Optional, Pattern, Union, Container
+from typing import Optional, Pattern, Union, Container, Type
 
 import re
 
 from fidget.backend.QtWidgets import QPlainTextEdit, QHBoxLayout
 
 from fidget.core import Fidget, inner_plaintext_parser, ValidationError
+from fidget.core.__util__ import first_valid
 
 from fidget.widgets.__util__ import optional_valid
 
@@ -17,10 +18,11 @@ class FidgetPlainTextEdit(Fidget[str]):
     PATTERN = None
     ALLOWED_CHARACTERS: Container[str] = None
     FORBIDDEN_CHARACTERS: Container[str] = None
+    EDIT_CLS: Type[QPlainTextEdit] = QPlainTextEdit
 
     def __init__(self, title: str, pattern: Union[str, Pattern[str]] = None,
                  allowed_characters: Container[str] = None, forbidden_characters: Container[str] = None,
-                 placeholder=True,
+                 placeholder=True, edit_cls=None,
                  **kwargs):
         """
         :param title: the title
@@ -42,14 +44,15 @@ class FidgetPlainTextEdit(Fidget[str]):
 
         self.edit: QPlainTextEdit = None
 
-        self.init_ui(placeholder=placeholder and self.title)
+        self.init_ui(placeholder=placeholder and self.title, edit_cls=edit_cls)
 
-    def init_ui(self, placeholder=None):
+    def init_ui(self, placeholder=None, edit_cls=None):
         super().init_ui()
         layout = QHBoxLayout(self)
 
         with self.setup_provided(layout):
-            self.edit = QPlainTextEdit()
+            edit_cls = first_valid(edit_cls=edit_cls, EDIT_CLS=self.EDIT_CLS)
+            self.edit = edit_cls()
             if placeholder:
                 self.edit.setPlaceholderText(placeholder)
             self.edit.textChanged.connect(self.change_value)
@@ -57,6 +60,8 @@ class FidgetPlainTextEdit(Fidget[str]):
             layout.addWidget(self.edit)
 
         self.setFocusProxy(self.edit)
+
+        return layout
 
     def parse(self):
         return self.edit.toPlainText()

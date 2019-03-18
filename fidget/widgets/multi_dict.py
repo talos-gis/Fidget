@@ -94,7 +94,15 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
                 inner.on_change.connect(self.change_value)
                 layout.addWidget(inner)
 
+        if not self.inners:
+            raise ValueError('at least one inner fidget must be provided')
+        self.setFocusProxy(
+            next(iter(self.inners.values()))
+        )
+
         master_layout.addWidget(frame)
+
+        return master_layout
 
     @staticmethod
     def _to_name_subtemplate(option: NamedTemplate) -> Tuple[str, FidgetTemplate[T]]:
@@ -174,10 +182,6 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
                 raise PlaintextPrintError(f'error printing {k}') from e
             ret[k] = s
         return ret
-
-    def plaintext_parsers(self):
-        if self.fill:
-            yield from super().plaintext_parsers()
 
     def _fill(self, d: Mapping[str, object]):
         for k, v in d.items():

@@ -58,6 +58,8 @@ class FidgetLineEdit(Fidget[str]):
 
         self.setFocusProxy(self.edit)
 
+        return layout
+
     def parse(self):
         return self.edit.text()
 

@@ -22,6 +22,7 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
     def __init__(self, inner_template: FidgetTemplate[F] = None,
                  converter_func: Callable[[F], T] = None,
                  back_converter_func: Optional[Callable[[T], F]] = None,
+                 layout_cls=None,
                  **kwargs):
         """
         :param inner_template: the template to wrap
@@ -41,7 +42,7 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
                 v = getattr(self, key.upper(), None)
                 if v is not None:
                     template_args[key] = v
-            kwargs[key] = False
+            kwargs[key] = True
         inner_template = inner_template.template(**template_args)
 
         super().__init__(inner_template.title, **kwargs)
@@ -51,13 +52,16 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
         self.converter_func = converter_func
         self.back_converter_func = back_converter_func
 
-        self.init_ui()
+        self.init_ui(layout_cls=layout_cls)
 
     INNER_TEMPLATE: FidgetTemplate[F] = None
+    LAYOUT_CLS = QHBoxLayout
 
-    def init_ui(self):
+    def init_ui(self, layout_cls=None):
         super().init_ui()
-        layout = QHBoxLayout(self)
+
+        layout_cls = layout_cls or self.LAYOUT_CLS
+        layout = layout_cls(self)
 
         self.inner = self.inner_template()
         layout.addWidget(self.inner)
@@ -66,8 +70,10 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
 
         if self.inner.title_label:
             self.make_title = True
-            self.title_label.linkActivated.disconnect(self.inner._help_clicked)
-            self.title_label.linkActivated.connect(self._help_clicked)
+            if self.help:
+                if self.inner.help:
+                    self.title_label.linkActivated.disconnect(self.inner._help_clicked)
+                self.title_label.linkActivated.connect(self._help_clicked)
 
         if self.inner.auto_button:
             self.inner.auto_button.clicked.disconnect(self.inner._auto_btn_click)
@@ -92,6 +98,8 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
 
         self.inner.on_change.connect(self.change_value)
         self.setFocusProxy(self.inner)
+
+        return layout
 
     def provided_pre(self, *args, **kwargs):
         return self.inner.provided_pre(*args, **kwargs)
@@ -166,6 +174,14 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
             if key in self.inner_template.kwargs:
                 template_args[key] = self.inner_template.kwargs[key]
         return ret.template(**template_args)
+
+
+class FidgetTransparentConverter(Generic[T], FidgetConverter[T, T]):
+    def convert(self, v: T):
+        return v
+
+    def back_convert(self, v):
+        return v
 
 
 if __name__ == '__main__':

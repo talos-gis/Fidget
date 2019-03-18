@@ -8,7 +8,7 @@ from fidget.core import format_printer, regex_parser, PlaintextParseError, wrap_
 from fidget.widgets.line import FidgetLineEdit
 from fidget.widgets.text import FidgetPlainTextEdit
 from fidget.widgets.converter import FidgetConverter
-
+from fidget.widgets.__util__ import parse_int
 T = TypeVar('T')
 
 
@@ -47,9 +47,6 @@ class SimpleLineEdit(Generic[T], FidgetConverter[str, T]):
     def plaintext_parsers(self):
         return Fidget.plaintext_parsers(self)
 
-    def plaintext_printers(self):
-        yield from super().plaintext_printers()
-
 
 class SimplePlainEdit(Generic[T], FidgetConverter[str, T]):
     """
@@ -86,18 +83,16 @@ class SimplePlainEdit(Generic[T], FidgetConverter[str, T]):
     def plaintext_parsers(self):
         return Fidget.plaintext_parsers(self)
 
-    def plaintext_printers(self):
-        yield from super().plaintext_printers()
-
 
 class FidgetInt(SimpleLineEdit[int]):
     """
     A line edit that converts the value to int
     """
-    _func = inner_plaintext_parser(staticmethod(wrap_plaintext_parser(ValueError, partial(int, base=0))))
+    _func = inner_plaintext_parser(staticmethod(wrap_plaintext_parser(ValueError, parse_int)))
 
-    def plaintext_printers(self):
-        yield from super().plaintext_printers()
+    @classmethod
+    def cls_plaintext_printers(cls):
+        yield from super().cls_plaintext_printers()
         yield hex
         yield bin
         yield oct
@@ -140,8 +135,9 @@ class FidgetFloat(SimpleLineEdit[float]):
         except ValueError as e:
             raise PlaintextParseError() from e
 
-    def plaintext_printers(self):
-        yield from super().plaintext_printers()
+    @classmethod
+    def cls_plaintext_printers(cls):
+        yield from super().cls_plaintext_printers()
         yield format_printer('f')
         yield format_printer('e')
         yield format_printer('g')

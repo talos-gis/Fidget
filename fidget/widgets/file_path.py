@@ -70,7 +70,8 @@ class FidgetFilePath(Fidget[Path]):
 
         self.init_ui(dialog)
 
-    DIALOG: Type[QFileDialog] = RememberingFileDialog
+    DEFAULT_DIALOG_CLS : Type[QFileDialog] = RememberingFileDialog
+    DIALOG: FileDialogArgs = RememberingFileDialog
     EXIST_COND = None
 
     def init_ui(self, dialog=None):
@@ -94,6 +95,8 @@ class FidgetFilePath(Fidget[Path]):
             layout.addWidget(browse_btn)
 
         self.setFocusProxy(self.edit)
+
+        return layout
 
     def browse(self, *a):
         if self.dialog.exec():
@@ -129,16 +132,17 @@ class FidgetFilePath(Fidget[Path]):
     def fill(self, v: Path):
         self.edit.setText(str(v))
 
-    def plaintext_parsers(self):
+    @classmethod
+    def cls_plaintext_parsers(cls):
         yield Path
         yield glob_search
-        yield from super().plaintext_parsers()
+        yield from super().cls_plaintext_parsers()
 
     @classmethod
     def _args_to_filedialog(cls, arg):
         if isinstance(arg, QFileDialog):
             return arg
         if isinstance(arg, dict):
-            return cls.DIALOG(**arg)
+            return cls.DEFAULT_DIALOG_CLS(**arg)
         if callable(arg):
             return arg()

@@ -12,7 +12,7 @@ from fidget.core import Fidget, PlaintextPrintError, PlaintextParseError, Fidget
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.idiomatic_inner import SingleFidgetWrapper
-from fidget.widgets.__util__ import only_valid
+from fidget.widgets.__util__ import only_valid, is_trivial_printer
 
 if __backend__.__name__ == 'PySide2':
     import shiboken2
@@ -119,6 +119,8 @@ class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
         self.warden = self.MouseWarden(target=self.inner, dispatch=partial(self.not_none_checkbox.setChecked, True))
         QApplication.instance().installEventFilter(self.warden)
 
+        return layout
+
     def parse(self):
         if self.not_none_checkbox.isChecked():
             return self.inner.parse()
@@ -132,7 +134,7 @@ class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
     def plaintext_printers(self):
         yield from super().plaintext_printers()
         for ip in self.inner.plaintext_printers():
-            if ip in (str, repr):
+            if is_trivial_printer(ip):
                 continue
 
             @wraps(ip)

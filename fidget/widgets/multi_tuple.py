@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Type, Iterable, Tuple, Sequence, Any
-from itertools import chain
+from typing import Type, Iterable, Tuple, Sequence, Any, NamedTuple
+
+from collections import namedtuple
 
 from fidget.backend.QtWidgets import QVBoxLayout, QFrame, QBoxLayout
 
@@ -13,7 +14,7 @@ from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
 from fidget.widgets.__util__ import only_valid
 
 
-class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
+class FidgetTuple(MultiFidgetWrapper[Any, NamedTuple]):
     """
     A Fidget that wraps multiple Fidgets into a tuple
     """
@@ -34,6 +35,7 @@ class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
 
         super().__init__(title, **kwargs)
         self.inners: Sequence[Fidget] = None
+        self.value_type: Type[NamedTuple] = None
 
         self.init_ui(frame_style=frame_style, layout_cls=layout_cls)
 
@@ -61,8 +63,17 @@ class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
                 inner.on_change.connect(self.change_value)
                 layout.addWidget(inner)
 
+        if not self.inners:
+            raise ValueError('at least one inner fidget must be provided')
+        self.setFocusProxy(
+            next(iter(self.inners))
+        )
+        self.value_type = namedtuple(self.title, (i.title for i in self.inners), rename=True)
+
         frame.setLayout(layout)
         master_layout.addWidget(frame)
+
+        return master_layout
 
     def parse(self):
         d = []
@@ -72,7 +83,7 @@ class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
             except ParseError as e:
                 raise ParseError('error parsing ' + subwidget.title, offender=subwidget) from e
             d.append(value)
-        return tuple(d)
+        return self.value_type._make(d)
 
     def validate(self, d: Tuple):
         super().validate(d)
@@ -123,10 +134,6 @@ class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
 
         return ret
 
-    def plaintext_parsers(self):
-        if self.fill:
-            yield from super().plaintext_parsers()
-
     def _fill(self, d: Tuple):
         for sw, v in zip(self.inners, d):
             sw.fill(v)
@@ -136,29 +143,3 @@ class FidgetTuple(MultiFidgetWrapper[Any, Tuple]):
         if not all(sw.fill for sw in self.inners):
             return None
         return self._fill
-
-
-if __name__ == '__main__':
-    from fidget.backend import QApplication, QHBoxLayout
-    from fidget.widgets import FidgetInt
-
-
-    class PointWidget(FidgetTuple):
-        MAKE_PLAINTEXT = True
-        MAKE_INDICATOR = True
-        MAKE_TITLE = True
-
-        LAYOUT_CLS = QHBoxLayout
-
-        INNER_TEMPLATES = [
-            FidgetInt.template('X', make_indicator=False),
-            FidgetInt.template('Y', make_indicator=False)
-        ]
-
-
-    app = QApplication([])
-    w = PointWidget('sample')
-    w.show()
-    res = app.exec_()
-    print(w.value())
-    exit(res)

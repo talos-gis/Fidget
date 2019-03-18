@@ -2,7 +2,8 @@
 These are widgets to get a simple string reply. Users should instead use fidget.widgets.Question
 """
 
-from fidget.backend.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QComboBox
+from fidget.backend.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QComboBox, \
+    QSpinBox
 from fidget.backend.QtCore import Qt
 from fidget.backend.QtGui import QFontDatabase
 
@@ -61,9 +62,9 @@ class PrimitiveQuestion(QDialog):
 class PrimitiveTextQuestion(PrimitiveQuestion):
     def __init__(self, *args, **kwargs):
         self.edit = self.get_edit()
+        super().__init__(*args, **kwargs)
 
         self.setWindowModality(Qt.ApplicationModal)
-        super().__init__(*args, **kwargs)
 
     @classmethod
     def get_edit(cls):
@@ -136,19 +137,47 @@ class FontQuestion(PrimitiveQuestion):
         for f in QFontDatabase().families():
             self.combo_box.addItem(f)
         self.combo_box.setCurrentIndex(-1)
+        self.combo_box.currentTextChanged.connect(self._update_preview)
         ret.addWidget(self.combo_box)
 
-        self.size_edit = QLineEdit()
-        self.size_edit.setPlaceholderText('size')
+        self.size_edit = QSpinBox()
+        self.size_edit.setValue(8)
+        self.size_edit.setRange(6, 50)
+        self.size_edit.valueChanged[int].connect(self._update_preview)
         ret.addWidget(self.size_edit)
+
+        self.preview_label = QLabel('preview\n1234567')
+        ret.addWidget(self.preview_label)
+
+        self.default_btn = QPushButton('default')
+
+        @self.default_btn.clicked.connect
+        def fill_default(a):
+            self.fill(QFontDatabase.systemFont(QFontDatabase.GeneralFont))
+
+        ret.addWidget(self.default_btn)
+
+        self.monospace_btn = QPushButton('monospace')
+
+        @self.monospace_btn.clicked.connect
+        def fill_mono(a):
+            self.fill(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+
+        ret.addWidget(self.monospace_btn)
 
         return ret
 
+    def fill(self, font):
+        self.combo_box.setCurrentText(font.family())
+        self.size_edit.setValue(font.pointSize())
+
+    def _update_preview(self, a):
+        font = self.preview_label.font()
+        font.setFamily(self.combo_box.currentText())
+        font.setPointSize(self.size_edit.value())
+        self.preview_label.setFont(font)
+
     def get_value(self):
         family = self.combo_box.currentText()
-        size = None
-        try:
-            size = int(self.size_edit.text())
-        except ValueError:
-            pass
+        size = self.size_edit.value()
         return family, size

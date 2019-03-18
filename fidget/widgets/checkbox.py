@@ -43,6 +43,7 @@ class FidgetCheckBox(Generic[T], Fidget[T]):
             layout.addWidget(self.checkbox)
 
         self.setFocusProxy(self.checkbox)
+        return layout
 
     @property
     def true_val(self):
@@ -69,7 +70,7 @@ class FidgetCheckBox(Generic[T], Fidget[T]):
 
     @inner_plaintext_parser
     def from_values(self, text):
-        for printer in self.plaintext_printers():
+        for printer in self.implicit_plaintext_printers():
             try:
                 true_text = printer(self.true_val)
             except PlaintextPrintError:

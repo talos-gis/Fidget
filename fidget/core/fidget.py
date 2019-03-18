@@ -9,7 +9,7 @@ from functools import partial, wraps, reduce
 from itertools import chain
 
 from fidget.backend.QtWidgets import QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
-    QMessageBox, QFileDialog, QGroupBox, QGridLayout, QDialog, QSizePolicy
+    QMessageBox, QFileDialog, QGroupBox, QGridLayout, QDialog, QSizePolicy, QBoxLayout
 from fidget.backend.QtCore import Qt, pyqtSignal, __backend__
 
 from fidget.core.plaintext_adapter import PlaintextParseError, PlaintextPrintError, \
@@ -247,7 +247,7 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         else:
             self.make_auto = False
 
-    def init_ui(self):
+    def init_ui(self)->Optional[QBoxLayout]:
         """
         initialise the internal widgets of the Fidget
         :inheritors: If you intend your class to be subclassed, don't add any widgets to self.
@@ -296,14 +296,9 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         if self.validation_func:
             self.validation_func(value)
 
-    def plaintext_printers(self) -> Iterable[PlaintextPrinter[T]]:
-        """
-        :return: an iterator of plaintext printers for the widget
-        """
-        if self:
-            yield from self._inner_plaintext_printers()
-            for d in self._plaintext_printer_delegates:
-                yield from d()
+    @classmethod
+    def cls_plaintext_printers(cls)->Iterable[PlaintextPrinter[T]]:
+        yield from cls._inner_cls_plaintext_printers()
         yield str
         yield repr
         yield format_spec_input_printer
@@ -311,11 +306,25 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         yield eval_printer
         yield exec_printer
 
+    def plaintext_printers(self) -> Iterable[PlaintextPrinter[T]]:
+        """
+        :return: an iterator of plaintext printers for the widget
+        """
+        yield from self._inner_plaintext_printers()
+        yield from self.cls_plaintext_printers()
+        for d in self._plaintext_printer_delegates:
+            yield from d()
+
+    @classmethod
+    def cls_plaintext_parsers(cls)->Iterable[PlaintextParser[T]]:
+        yield from cls._inner_cls_plaintext_parsers()
+
     def plaintext_parsers(self) -> Iterable[PlaintextParser[T]]:
         """
         :return: an iterator of plaintext parsers for the widget
         """
         yield from self._inner_plaintext_parsers()
+        yield from self.cls_plaintext_parsers()
         for d in self._plaintext_parser_delegates:
             yield from d()
 
@@ -473,9 +482,15 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         self._plaintext_parser_delegates.append(delegate)
         self._joined_plaintext_parser = None
 
-    def add_plaintext_delegates(self, clone: Fidget):
-        self.add_plaintext_parsers_delegate(clone.plaintext_parsers)
-        self.add_plaintext_printers_delegate(clone.plaintext_printers)
+    def add_plaintext_delegates(self, clone: Union[Fidget, Type[Fidget]]):
+        if isinstance(clone, Fidget):
+            self.add_plaintext_parsers_delegate(clone.plaintext_parsers)
+            self.add_plaintext_printers_delegate(clone.plaintext_printers)
+        elif isinstance(clone, type) and issubclass(clone, Fidget):
+            self.add_plaintext_printers_delegate(clone.cls_plaintext_printers)
+            self.add_plaintext_parsers_delegate(clone.cls_plaintext_parsers)
+        else:
+            raise TypeError(type(clone))
 
     # endregion
 
@@ -582,17 +597,33 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         """
         yield from ()
 
+    @staticmethod
+    def _inner_cls_plaintext_printers():
+        yield from ()
+
+    @staticmethod
+    def _inner_cls_plaintext_parsers():
+        yield from ()
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         cls.on_change = pyqtSignal()
 
         inner_printers = []
         inner_parsers = []
+        inner_cls_printers = []
+        inner_cls_parsers = []
         for v in cls.__dict__.values():
             if getattr(v, '__plaintext_printer__', False):
-                inner_printers.append(v)
+                if getattr(v, '__is_cls__', False) or isinstance(v, (classmethod, staticmethod)):
+                    inner_cls_printers.append(v)
+                else:
+                    inner_printers.append(v)
             if getattr(v, '__plaintext_parser__', False):
-                inner_parsers.append(v)
+                if getattr(v, '__is_cls__', False) or isinstance(v, (classmethod, staticmethod)):
+                    inner_cls_parsers.append(v)
+                else:
+                    inner_parsers.append(v)
 
         if inner_printers:
             def inner_printers_func(self):
@@ -605,6 +636,18 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
                 yield from (p.__get__(self, type(self)) for p in inner_parsers)
 
             cls._inner_plaintext_parsers = inner_parsers_func
+        
+        if inner_cls_printers:
+            def inner_cls_printers_func(cls):
+                yield from (p.__get__(None, cls) for p in inner_cls_printers)
+            
+            cls._inner_cls_plaintext_printers = classmethod(inner_cls_printers_func)
+
+        if inner_cls_parsers:
+            def inner_cls_parsers_func(cls):
+                yield from (p.__get__(None, cls) for p in inner_cls_parsers)
+
+            cls._inner_cls_plaintext_parsers = classmethod(inner_cls_parsers_func)
 
 
 class DoNotFill(Exception):
@@ -660,7 +703,7 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
 
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self)->Optional[QBoxLayout]:
         super().init_ui()
         self.setWindowModality(Qt.WindowModal)
 
@@ -725,7 +768,6 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
         self.ok_button.clicked.connect(self.commit_parse)
         parse_extras_layout.addWidget(self.ok_button, 2, 1)
 
-
         parse_layout.addLayout(parse_extras_layout)
 
         master_layout.addWidget(self.parse_widget)
@@ -736,6 +778,8 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
         master_layout.addWidget(self.font_button)
 
         self.on_change.connect(self._on_value_change)
+
+        return master_layout
 
     def parse(self):
         parser: PlaintextParser = self.parse_combo.currentData()

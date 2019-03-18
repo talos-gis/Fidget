@@ -4,6 +4,8 @@ from fidget.backend.QtWidgets import QComboBox, QHBoxLayout
 
 from fidget.core import Fidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
 
+from fidget.widgets.__util__ import TolerantDict
+
 T = TypeVar('T')
 
 
@@ -28,8 +30,7 @@ class FidgetCombo(Generic[T], Fidget[T]):
         self.default_value = default_value
         self.options = options
 
-        self._opt_lookup_hashable: Dict[T, Tuple[int, str]] = None
-        self._opt_lookup_non_hashable: List[Tuple[T, Tuple[int, str]]] = None
+        self._opt_lookup: TolerantDict[T, Tuple[int, str]] = None
         self._opt_lookup_name: Dict[str, Tuple[int, T]] = None
 
         self.combo_box: QComboBox = None
@@ -45,8 +46,7 @@ class FidgetCombo(Generic[T], Fidget[T]):
             self.combo_box = QComboBox()
             layout.addWidget(self.combo_box)
 
-            self._opt_lookup_hashable = {}
-            self._opt_lookup_non_hashable = []
+            self._opt_lookup = TolerantDict()
             self._opt_lookup_name = {}
 
             ind = self.default_index
@@ -57,16 +57,13 @@ class FidgetCombo(Generic[T], Fidget[T]):
                     ind = i
 
                 self._opt_lookup_name[name] = (i, value)
-
-                try:
-                    self._opt_lookup_hashable[value] = (i, name)
-                except TypeError:
-                    self._opt_lookup_non_hashable.append((value, (i, name)))
+                self._opt_lookup[value] = (i, name)
 
             self.combo_box.setCurrentIndex(ind)
             self.combo_box.currentIndexChanged.connect(self.change_value)
 
         self.setFocusProxy(self.combo_box)
+        return layout
 
     def parse(self):
         if self.combo_box.currentIndex() == -1:
@@ -86,17 +83,8 @@ class FidgetCombo(Generic[T], Fidget[T]):
 
     def fill(self, key: Union[T, int]):
         try:
-            index, _ = self._opt_lookup_hashable[key]
-        except TypeError:
-            # v is unhashable, look in non-hashables
-            for k, (i, _) in self._opt_lookup_non_hashable:
-                if k == key:
-                    index = i
-                    break
-            else:
-                raise KeyError(f'fill value {key} is not an option')
+            index, _ = self._opt_lookup[key]
         except KeyError as e:
-            # v is hashable, but not present
             if isinstance(key, int):
                 index = key
             else:
