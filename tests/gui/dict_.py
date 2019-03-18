@@ -8,6 +8,7 @@ class PointWidget(FidgetDict):
     MAKE_PLAINTEXT = True
     MAKE_TITLE = True
     MAKE_INDICATOR = True
+    SCROLLABLE = False
 
     INNER_TEMPLATES = [
         FidgetFloat.template('X'),

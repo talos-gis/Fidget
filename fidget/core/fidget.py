@@ -650,6 +650,7 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
         self.apply_button: QPushButton = None
 
         self.font_button: QPushButton = None
+        self.clone_button: QPushButton = None
 
         self.parse_widget: QWidget = None
         self.parse_edit: PlaintextEditWidget._ShiftEnterIgnoringPlainTextEdit = None
@@ -686,6 +687,11 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
         print_layout.addLayout(print_extras_layout)
 
         master_layout.addWidget(self.print_widget)
+
+        self.clone_button = QPushButton('🡇')
+        self.clone_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self.clone_button.clicked.connect(self._clone_btn_clicked)
+        master_layout.addWidget(self.clone_button)
 
         self.parse_widget = QGroupBox('set value:')
         parse_master_layout = QVBoxLayout(self.parse_widget)
@@ -787,15 +793,17 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
 
         self.setWindowTitle('plaintext edit for ' + self.owner.title)
 
+        self.clone_button.setVisible(False)
+
         owner_value = self.owner.value()
-        if not owner_value.is_ok():
+        printers = list(self.owner.plaintext_printers())
+        if not owner_value.is_ok() or not printers:
             self.print_widget.setVisible(False)
             printers = False
         else:
             self.current_value = owner_value.value
 
             self.print_widget.setVisible(True)
-            printers = list(self.owner.plaintext_printers())
             # setup the print
 
             combo_index = 0
@@ -826,6 +834,8 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
         if not parsers:
             self.parse_widget.setVisible(False)
         else:
+            if printers:
+                self.clone_button.setVisible(True)
             if not self.owner.fill:
                 raise Exception(
                     f'parsers are defined but the widget has no implemented fill method (in widget {self.owner})')
@@ -914,6 +924,10 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
             if size:
                 font.setPointSize(size)
             edit.document().setDefaultFont(font)
+
+    def _clone_btn_clicked(self, arg):
+        text = self.print_edit.toPlainText()
+        self.parse_edit.setPlainText(text)
 
     def keyPressEvent(self, event):
         if (event.modifiers() == Qt.ShiftModifier and event.key() == Qt.Key_Return) \
