@@ -7,6 +7,8 @@ from fidget.core import Fidget, inner_plaintext_parser, PlaintextParseError, Pla
 T = TypeVar('T')
 
 
+# todo update indicator
+
 class FidgetLabel(Generic[T], Fidget[T]):
     """
     A Fidget that immutably contains a single value
