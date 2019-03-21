@@ -11,6 +11,8 @@ __backend__ = load()
 
 _QtCore = __backend__.partial('QtCore')
 
+QtCore = __backend__.module('QtCore')
+
 QEvent: Type[PyQt5.QtCore.QEvent] = _QtCore['QEvent']
 QEventLoop: Type[PyQt5.QtCore.QEventLoop] = _QtCore['QEventLoop']
 QObject: Type[PyQt5.QtCore.QObject] = _QtCore['QObject']

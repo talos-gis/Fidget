@@ -22,13 +22,13 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
 
     def __init__(self, inner_template: TemplateLike[T] = None, outer_template: TemplateLike[T] = None, layout_cls=None,
                  initial_value: T = NOT_INITIAL, **kwargs):
-        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
+        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE, _self=self).template_of()
 
         super().__init__(inner_template.title, **kwargs)
 
         self.inner_template = inner_template
         self.outer_template = only_valid(outer_template=outer_template,
-                                         OUTER_TEMPLATE=self.OUTER_TEMPLATE).template_of()
+                                         OUTER_TEMPLATE=self.OUTER_TEMPLATE, _self=self).template_of()
 
         self.browse_btn: QPushButton = None
 
@@ -40,14 +40,14 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
         self.init_ui(layout_cls=layout_cls)
 
         initial_value = optional_valid(initial_value=initial_value, INITIAL_VALUE=self.INITIAL_VALUE,
-                                       _invalid=self.NOT_INITIAL)
+                                       _invalid=self.NOT_INITIAL, _self=self)
 
         self.fill_value(initial_value)
 
     def init_ui(self, layout_cls=None, ok_text=None, cancel_text=None, modality=None,
                 pre_widget=None, post_widget=None):
         super().init_ui()
-        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
+        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS, _self=self)
 
         layout: QBoxLayout = layout_cls(self)
         with self.setup_provided(layout):
@@ -59,7 +59,7 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
             self.browse_btn.clicked.connect(self._browse_btn_clicked)
             layout.addWidget(self.browse_btn)
 
-        self.question = FidgetQuestion(self.inner_template, cancel_value=self.NOT_INITIAL)
+        self.question = FidgetQuestion(self.inner_template, parent=self, cancel_value=self.NOT_INITIAL)
         self.outer.add_plaintext_delegates(self.question)
 
         return layout

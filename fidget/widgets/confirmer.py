@@ -10,7 +10,7 @@ from fidget.core import Fidget, FidgetTemplate, ParseError, TemplateLike, inner_
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.idiomatic_inner import SingleFidgetWrapper
-from fidget.widgets.__util__ import only_valid, optional_valid
+from fidget.widgets.__util__ import only_valid
 
 T = TypeVar('T')
 C = TypeVar('C')
@@ -37,7 +37,7 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
         :param window_modality: the modality of the widget, convenience parameter
         :param kwargs: forwarded to Fidget
         """
-        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
+        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE, _self=self).template_of()
 
         super().__init__(inner_template.title, **kwargs)
 
@@ -51,7 +51,7 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
         self.make_cancel = cancel_value is not self.NO_CANCEL
         self.cancel_flag = False
 
-        self.close_on_confirm = first_valid(close_on_confirm=close_on_confirm, CLOSE_ON_CONFIRM=self.CLOSE_ON_CONFIRM)
+        self.close_on_confirm = first_valid(close_on_confirm=close_on_confirm, CLOSE_ON_CONFIRM=self.CLOSE_ON_CONFIRM, _self=self)
 
         self.init_ui(layout_cls=layout_cls, ok_text=ok_text, cancel_text=cancel_text, modality=window_modality)
 
@@ -67,7 +67,7 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
 
     def init_ui(self, layout_cls=None, ok_text=None, cancel_text=None, modality=None):
         super().init_ui()
-        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
+        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS, _self=self)
         modality = modality or self.WINDOW_MODALITY
 
         layout: QBoxLayout = layout_cls(self)
@@ -81,11 +81,11 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
 
             btn_layout = QHBoxLayout()
             if self.make_cancel:
-                self.cancel_button = QPushButton(first_valid(cancel_text=cancel_text, CANCEL_TEXT=self.CANCEL_TEXT))
+                self.cancel_button = QPushButton(first_valid(cancel_text=cancel_text, CANCEL_TEXT=self.CANCEL_TEXT, _self=self))
                 self.cancel_button.clicked.connect(self._cancel_btn_clicked)
                 btn_layout.addWidget(self.cancel_button)
 
-            self.ok_button = QPushButton(first_valid(ok_text=ok_text, CANCEL_TEXT=self.OK_TEXT))
+            self.ok_button = QPushButton(first_valid(ok_text=ok_text, CANCEL_TEXT=self.OK_TEXT, _self=self))
             self.ok_button.clicked.connect(self._ok_btn_clicked)
             btn_layout.addWidget(self.ok_button)
 

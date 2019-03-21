@@ -2,7 +2,7 @@
 These are widgets to get a simple string reply. Users should instead use fidget.widgets.Question
 """
 
-from fidget.backend.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QComboBox, \
+from fidget.backend.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QFontComboBox, \
     QSpinBox
 from fidget.backend.QtCore import Qt
 from fidget.backend.QtGui import QFontDatabase
@@ -133,9 +133,7 @@ class FontQuestion(PrimitiveQuestion):
     def inner_layout(self):
         ret = QHBoxLayout()
 
-        self.combo_box = QComboBox()
-        for f in QFontDatabase().families():
-            self.combo_box.addItem(f)
+        self.combo_box = QFontComboBox()
         self.combo_box.setCurrentIndex(-1)
         self.combo_box.currentTextChanged.connect(self._update_preview)
         ret.addWidget(self.combo_box)

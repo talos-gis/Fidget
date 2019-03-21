@@ -15,13 +15,15 @@ from fidget.backend.QtCore import Qt, pyqtSignal, __backend__
 from fidget.core.plaintext_adapter import PlaintextParseError, PlaintextPrintError, \
     join_parsers, join_printers, PlaintextParser, PlaintextPrinter, \
     format_spec_input_printer, formatted_string_input_printer, exec_printer, eval_printer, \
-    explicits_last
+    sort_adapters
 from fidget.core.fidget_value import FidgetValue, BadValue, GoodValue, ParseError, ValidationError
 from fidget.core.primitive_questions import FontQuestion
 from fidget.core.__util__ import error_details, first_valid, error_attrs
 
 T = TypeVar('T')
 
+
+# todo automatically create template if QApplication isn't instantiated?⌡
 
 class TemplateLike(Generic[T]):
     @abstractmethod
@@ -71,6 +73,12 @@ class FidgetTemplate(Generic[T], TemplateLike[T]):
         Create a widget form the template. args and kwargs are forwarded to the class constructor.
         """
         return self._partial()(*args, **kwargs)
+
+    def set_default(self, **kwargs):
+        for key in list(kwargs.keys()):
+            if key in self.kwargs:
+                del kwargs[key]
+        return self.template(**kwargs)
 
     def template(self, *args, **kwargs):
         """
@@ -216,9 +224,9 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         self.title = title
         self.help = help
 
-        self.make_title = first_valid(make_title=make_title, MAKE_TITLE=self.MAKE_TITLE)
-        self.make_indicator = first_valid(make_indicator=make_indicator, MAKE_INDICATOR=self.MAKE_INDICATOR)
-        self.make_plaintext = first_valid(make_plaintext=make_plaintext, MAKE_PLAINTEXT=self.MAKE_PLAINTEXT)
+        self.make_title = first_valid(make_title=make_title, MAKE_TITLE=self.MAKE_TITLE, _self=self)
+        self.make_indicator = first_valid(make_indicator=make_indicator, MAKE_INDICATOR=self.MAKE_INDICATOR, _self=self)
+        self.make_plaintext = first_valid(make_plaintext=make_plaintext, MAKE_PLAINTEXT=self.MAKE_PLAINTEXT, _self=self)
 
         self.indicator_label: Optional[QLabel] = None
         self.auto_button: Optional[QPushButton] = None
@@ -247,7 +255,7 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         else:
             self.make_auto = False
 
-    def init_ui(self)->Optional[QBoxLayout]:
+    def init_ui(self) -> Optional[QBoxLayout]:
         """
         initialise the internal widgets of the Fidget
         :inheritors: If you intend your class to be subclassed, don't add any widgets to self.
@@ -297,7 +305,7 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
             self.validation_func(value)
 
     @classmethod
-    def cls_plaintext_printers(cls)->Iterable[PlaintextPrinter[T]]:
+    def cls_plaintext_printers(cls) -> Iterable[PlaintextPrinter[T]]:
         yield from cls._inner_cls_plaintext_printers()
         yield str
         yield repr
@@ -316,7 +324,7 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
             yield from d()
 
     @classmethod
-    def cls_plaintext_parsers(cls)->Iterable[PlaintextParser[T]]:
+    def cls_plaintext_parsers(cls) -> Iterable[PlaintextParser[T]]:
         yield from cls._inner_cls_plaintext_parsers()
 
     def plaintext_parsers(self) -> Iterable[PlaintextParser[T]]:
@@ -468,7 +476,10 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         return class_
 
     def __str__(self):
-        return super().__str__() + ': ' + self.title
+        try:
+            return super().__str__() + ': ' + self.title
+        except AttributeError:
+            return super().__str__()
 
     def fill_value(self, *args, **kwargs):
         with self.suppress_update():
@@ -636,11 +647,11 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
                 yield from (p.__get__(self, type(self)) for p in inner_parsers)
 
             cls._inner_plaintext_parsers = inner_parsers_func
-        
+
         if inner_cls_printers:
             def inner_cls_printers_func(cls):
                 yield from (p.__get__(None, cls) for p in inner_cls_printers)
-            
+
             cls._inner_cls_plaintext_printers = classmethod(inner_cls_printers_func)
 
         if inner_cls_parsers:
@@ -699,11 +710,11 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
         self.parse_edit: PlaintextEditWidget._ShiftEnterIgnoringPlainTextEdit = None
         self.parse_combo: QComboBox = None
 
-        self.owner = kwargs.get('parent')
+        self.owner: Fidget = kwargs.get('parent')
 
         self.init_ui()
 
-    def init_ui(self)->Optional[QBoxLayout]:
+    def init_ui(self) -> Optional[QBoxLayout]:
         super().init_ui()
         self.setWindowModality(Qt.WindowModal)
 
@@ -865,9 +876,9 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
             else:
                 self.print_combo.setVisible(False)
 
-            for printer, is_explicit in explicits_last(printers):
+            for printer, priority in sort_adapters(printers):
                 name = printer.__name__
-                if is_explicit:
+                if priority < 0:
                     name += '*'
                 self.print_combo.addItem(name, printer)
 
@@ -901,9 +912,9 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
             else:
                 self.parse_combo.setVisible(False)
 
-            for parser, is_explicit in explicits_last(parsers):
+            for parser, priority in sort_adapters(parsers):
                 name = parser.__name__
-                if is_explicit:
+                if priority < 0:
                     name += '*'
                 self.parse_combo.addItem(name, parser)
             self.parse_combo.setCurrentIndex(combo_index)

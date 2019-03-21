@@ -64,7 +64,7 @@ def is_trivial_printer(p):
     return p in _trivial_printers
 
 
-def only_valid(_invalid=None, **kwargs: Optional[T]) -> T:
+def only_valid(_invalid=None, _self=None, **kwargs: Optional[T]) -> T:
     """
     check that only one of the arguments is not None, and return its value
     :return: the value of the only not-None argument
@@ -74,26 +74,38 @@ def only_valid(_invalid=None, **kwargs: Optional[T]) -> T:
         if v is _invalid:
             continue
         if valid is not _invalid:
-            raise TypeError(f'both {valid[0]} and {k} provided')
+            if _self:
+                self_str = f' in {_self}'
+            else:
+                self_str = ''
+            raise TypeError(f'both {valid[0]} and {k} provided{self_str}')
         valid = k, v
     if valid is _invalid:
-        raise TypeError(f'none of {", ".join(kwargs.keys())} provided')
+        if _self:
+            self_str = f' in {_self}'
+        else:
+            self_str = ''
+        raise TypeError(f'none of {", ".join(kwargs.keys())} provided{self_str}')
     return valid[1]
 
 
-def optional_valid(_invalid=None, **kwargs: Optional[T]) -> Optional[T]:
+def optional_valid(_invalid=None, _self=None, **kwargs: Optional[T]) -> Optional[T]:
     """
     check at most one of the arguments is not None, and return its value
     :return: the value of the only not-None argument, or None
     """
-    valid = None
+    valid = _invalid
     for k, v in kwargs.items():
         if v is _invalid:
             continue
         if valid is not _invalid:
-            raise TypeError(f'both {valid[0]} and {k} provided')
+            if _self:
+                self_str = f' in {_self}'
+            else:
+                self_str = ''
+            raise TypeError(f'both {valid[0]} and {k} provided{self_str}')
         valid = k, v
-    if valid is None:
+    if valid is _invalid:
         return _invalid
     return valid[1]
 
@@ -110,17 +122,6 @@ def last_focus_proxy(seed: QWidget):
             return ret
         ret = focus
 
-
-@lru_cache(None)
-def wrap(func, **kwargs):
-    @wraps(func)
-    def ret(*a, **k):
-        return func(*a, **k)
-
-    for k, v in kwargs.items():
-        setattr(ret, k, v)
-
-    return ret
 
 
 def repeat_last(iterable):
@@ -301,6 +302,7 @@ class PrefixTrie(Container[str]):
     >>> 'c' not in t
     True
     """
+
     def __init__(self):
         self.children: Dict[str, PrefixTrie] = {}
 
@@ -321,3 +323,20 @@ class PrefixTrie(Container[str]):
         if char not in self.children:
             return False
         return s in self.children[char]
+
+
+def to_identifier(s: str):
+    if s.isidentifier():
+        return s
+
+    s = s.strip().replace(' ', '_')
+    if s.isidentifier():
+        return s
+
+    if not s[0].isidentifier():
+        s = '_' + s
+    s = ''.join(c for c in s if c.isalnum() or c == '_')
+    if not s.isidentifier():
+        return s
+
+    return '_'

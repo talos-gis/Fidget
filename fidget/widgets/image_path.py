@@ -26,8 +26,8 @@ class FidgetImagePath(FidgetTransparentConverter[Path]):
 
         super().__init__(template, **kwargs)
 
-        self.preview_height = first_valid(preview_height = preview_height, PREVIEW_HEIGHT=self.PREVIEW_HEIGHT)
-        self.preview_width = first_valid(preview_width=preview_width, PREVIEW_WIDTH=self.PREVIEW_WIDTH)
+        self.preview_height = first_valid(preview_height = preview_height, PREVIEW_HEIGHT=self.PREVIEW_HEIGHT, _self=self)
+        self.preview_width = first_valid(preview_width=preview_width, PREVIEW_WIDTH=self.PREVIEW_WIDTH, _self=self)
 
     LAYOUT_CLS = QVBoxLayout
 

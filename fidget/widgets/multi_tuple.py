@@ -11,7 +11,7 @@ from fidget.core import Fidget, ParseError, ValidationError, inner_plaintext_par
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
-from fidget.widgets.__util__ import only_valid
+from fidget.widgets.__util__ import only_valid, to_identifier
 
 
 class FidgetTuple(MultiFidgetWrapper[Any, NamedTuple]):
@@ -29,7 +29,8 @@ class FidgetTuple(MultiFidgetWrapper[Any, NamedTuple]):
         :param kwargs: forwarded to Fidget
         """
         self.inner_templates = tuple(
-            t.template_of() for t in only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES)
+            t.template_of() for t in
+            only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES, _self=self)
         )
         FidgetTemplate.extract_default(*self.inner_templates, upper_space=self, sink=kwargs)
 
@@ -45,7 +46,7 @@ class FidgetTuple(MultiFidgetWrapper[Any, NamedTuple]):
     def init_ui(self, frame_style=None, layout_cls: Type[QBoxLayout] = None):
         super().init_ui()
 
-        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
+        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS, _self=self)
 
         master_layout = layout_cls(self)
 
@@ -68,7 +69,8 @@ class FidgetTuple(MultiFidgetWrapper[Any, NamedTuple]):
         self.setFocusProxy(
             next(iter(self.inners))
         )
-        self.value_type = namedtuple(self.title, (i.title for i in self.inners), rename=True)
+        self.value_type = namedtuple(to_identifier(self.title), (to_identifier(i.title) for i in self.inners),
+                                     rename=True)
 
         frame.setLayout(layout)
         master_layout.addWidget(frame)

@@ -8,15 +8,17 @@ from fidget.backend.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QMen
     QScrollArea, QWidget
 from fidget.backend.QtCore import Qt
 from fidget.backend.QtGui import QCursor
+from fidget.backend.Resources import add_row_above_icon, add_row_below_icon, add_col_left_icon, add_col_right_icon,\
+    del_row_icon, del_col_icon
 
 from fidget.core import TemplateLike, Fidget, FidgetTemplate, ParseError, ValidationError, \
     inner_plaintext_printer, inner_plaintext_parser, json_parser, PlaintextPrintError, PlaintextParseError, json_printer
-from fidget.core.__util__ import first_valid
+from fidget.core.__util__ import first_valid, mask, update
 
 from fidget.widgets.idiomatic_inner import SingleFidgetWrapper
 from fidget.widgets.user_util import FidgetInt
 from fidget.widgets.confirmer import FidgetQuestion
-from fidget.widgets.__util__ import only_valid, last_focus_proxy, wrap, repeat_last, valid_between, CountBounds, \
+from fidget.widgets.__util__ import only_valid, last_focus_proxy, repeat_last, valid_between, CountBounds, \
     table_printer
 
 T = TypeVar('T')
@@ -35,18 +37,18 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
                  column_button_text_func: Callable[[int], str] = None,
                  scrollable=None,
                  **kwargs):
-        self.row_bounds = CountBounds[first_valid(rows=rows, ROWS=self.ROWS)]
-        self.column_bounds = CountBounds[first_valid(columns=columns, COLUMNS=self.COLUMNS)]
+        self.row_bounds = CountBounds[first_valid(rows=rows, ROWS=self.ROWS, _self=self)]
+        self.column_bounds = CountBounds[first_valid(columns=columns, COLUMNS=self.COLUMNS, _self=self)]
 
-        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
+        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE, _self=self).template_of()
 
         super().__init__(inner_template.title, **kwargs)
 
         self.inner_template = inner_template
         self.row_button_text_func = first_valid(row_button_text_func=row_button_text_func,
-                                                ROW_BUTTON_TEXT_FUNC=self.ROW_BUTTON_TEXT_FUNC)
+                                                ROW_BUTTON_TEXT_FUNC=self.ROW_BUTTON_TEXT_FUNC, _self=self)
         self.column_button_text_func = first_valid(column_button_text_func=column_button_text_func,
-                                                   COLUMN_BUTTON_TEXT_FUNC=self.COLUMN_BUTTON_TEXT_FUNC)
+                                                   COLUMN_BUTTON_TEXT_FUNC=self.COLUMN_BUTTON_TEXT_FUNC, _self=self)
         if self.column_button_text_func is ...:
             self.column_button_text_func = self.row_button_text_func
 
@@ -73,10 +75,10 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
 
     def init_ui(self, layout_cls=None, scrollable=None):
         super().init_ui()
-        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
+        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS, _self=self)
 
         owner = self
-        scrollable = first_valid(scrollable=scrollable, SCROLLABLE=self.SCROLLABLE)
+        scrollable = first_valid(scrollable=scrollable, SCROLLABLE=self.SCROLLABLE, _self=self)
 
         owner_layout = QVBoxLayout()
         owner.setLayout(owner_layout)
@@ -224,20 +226,20 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
             self.del_row(row_index)
             self.apply_matrix()
 
-        ret.add_top_action = menu.addAction(self.style().standardIcon(QStyle.SP_ArrowUp), 'add row above', add_top)
+        ret.add_top_action = menu.addAction(add_row_above_icon(), 'add row above', add_top)
         ret.add_top_action.setEnabled(False)
 
         ret.add_many_top_action = menu.addAction('add rows above', add_many_top)
         ret.add_many_top_action.setEnabled(False)
 
-        ret.add_bottom_action = menu.addAction(self.style().standardIcon(QStyle.SP_ArrowDown), 'add row below',
+        ret.add_bottom_action = menu.addAction(add_row_below_icon(), 'add row below',
                                                add_bottom)
         ret.add_bottom_action.setEnabled(False)
 
         ret.add_many_bottom_action = menu.addAction('add rows below', add_many_bottom)
         ret.add_many_bottom_action.setEnabled(False)
 
-        ret.del_action = menu.addAction(self.style().standardIcon(QStyle.SP_DialogCloseButton), 'delete row', del_)
+        ret.del_action = menu.addAction(del_row_icon(), 'delete row', del_)
         ret.del_action.setEnabled(False)
 
         @ret.clicked.connect
@@ -298,21 +300,21 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
             self.del_col(col_index)
             self.apply_matrix()
 
-        ret.add_left_action = menu.addAction(self.style().standardIcon(QStyle.SP_ArrowLeft), 'add column left',
+        ret.add_left_action = menu.addAction(add_col_left_icon(), 'add column left',
                                              add_left)
         ret.add_left_action.setEnabled(False)
 
         ret.add_many_left_action = menu.addAction('add columns left', add_many_left)
         ret.add_many_left_action.setEnabled(False)
 
-        ret.add_right_action = menu.addAction(self.style().standardIcon(QStyle.SP_ArrowRight), 'add column right',
+        ret.add_right_action = menu.addAction(add_col_right_icon(), 'add column right',
                                               add_right)
         ret.add_right_action.setEnabled(False)
 
         ret.add_many_right_action = menu.addAction('add columns right', add_many_right)
         ret.add_many_right_action.setEnabled(False)
 
-        ret.del_action = menu.addAction(self.style().standardIcon(QStyle.SP_DialogCloseButton), 'delete column', del_)
+        ret.del_action = menu.addAction(del_col_icon(), 'delete column', del_)
         ret.del_action.setEnabled(False)
 
         @ret.clicked.connect
@@ -569,21 +571,21 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
             raise PlaintextParseError(f'too many elements, expected {size}')
         return ret
 
-    matrix = inner_plaintext_printer(wrap(table_printer((
+    matrix = inner_plaintext_printer(update(__name__='matrix')(table_printer((
         ('/', '\\'),
         ('|', '|'),
         ('\\', '/')
-    ), ',', '\n'), __name__='matrix'))
+    ), ',', '\n')))
 
-    markdown = inner_plaintext_printer(wrap(table_printer((
+    markdown = inner_plaintext_printer(update(__name__='markdown')(table_printer((
         ('|', '|'),
         ('|', '|'),
         ('|', '|')
-    ), '|', '\n'), __name__='markdown'))
+    ), '|', '\n')))
 
     def plaintext_parsers(self):
         yield from super().plaintext_parsers()
-        yield wrap(self.from_json_reshape, __explicit__=not self.is_constant_size)
+        yield mask(self.from_json_reshape, __explicit__=not self.is_constant_size)
 
     def string_matrix(self, v):
         ret = []

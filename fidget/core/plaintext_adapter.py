@@ -1,15 +1,16 @@
-from typing import TypeVar, Union, Pattern, Callable, Any, Match, Iterable, Tuple, Type
+from typing import TypeVar, Union, Pattern, Callable, Any, Match, Iterable, Tuple, Type, Dict, List
 
 import re
 import json
-from functools import wraps
+from functools import wraps, lru_cache, partial
 from textwrap import indent
+from enum import IntEnum
 
 from fidget.backend.QtWidgets import QDialog
 
 from fidget.core.primitive_questions import FormatSpecQuestion, FormattedStringQuestion, ExecStringQuestion, \
     EvalStringQuestion
-from fidget.core.__util__ import exc_wrap
+from fidget.core.__util__ import exc_wrap, update
 
 T = TypeVar('T')
 
@@ -116,9 +117,11 @@ def join_parsers(parsers: Callable[[], Iterable[PlaintextParser]]):
     def ret(s):
         seen = set()
         first_error = None
-        for p in parsers():
-            if getattr(p, '__explicit__', False) or p in seen:
+        for p, prio in sort_adapters(parsers()):
+            if p in seen:
                 continue
+            if prio < 0:
+                break
 
             seen.add(p)
 
@@ -141,9 +144,11 @@ def join_printers(printers: Callable[[], Iterable[PlaintextPrinter]]):
     def ret(s):
         seen = set()
         first_error = None
-        for p in printers():
-            if getattr(p, '__explicit__', False) or p in seen:
+        for p, prio in sort_adapters(printers()):
+            if p in seen:
                 continue
+            if prio < 0:
+                break
 
             seen.add(p)
 
@@ -202,21 +207,26 @@ def formatted_string_printer(formatted_string):
     return ret
 
 
-def explicit(func):
-    """
-    mark a function as explicit, and return it
-    """
+class AdapterPriority(IntEnum):
+    explicit = -1  # never even run implicitly
+    low = 0
+    mid = 1
+    high = 2
+    default = mid
 
-    func.__explicit__ = True
-    return func
+
+explicit = update(__explicit__=AdapterPriority.explicit)
+low_priority = update(__priority__=AdapterPriority.low)
+high_priority = update(__priority__=AdapterPriority.high)
+mid_priority = update(__priority__=AdapterPriority.mid)
 
 
-def explicits_last(it):
+def sort_adapters(it: Iterable[T]):
     """
     sort between explicit and non-explicit elements, returning the explicit elements last, with an indicator,
      and avoiding duplicate elements
     """
-    explcits = []
+    deffered: Dict[AdapterPriority, List[T]] = {}
     seen = set()
 
     for i in it:
@@ -225,14 +235,19 @@ def explicits_last(it):
         else:
             seen.add(i)
 
-        if getattr(i, '__explicit__', False):
-            explcits.append(i)
+        if hasattr(i, '__priority__'):
+            priority = i.__priority__
+        elif getattr(i, '__explicit__', False):
+            priority = AdapterPriority.explicit
         else:
-            yield i, False
+            priority = AdapterPriority.default
+
+        deffered.setdefault(priority, []).append(i)
 
     del seen
-    for e in explcits:
-        yield e, True
+    for priority in sorted(deffered.keys(), reverse=True):
+        for i in deffered[priority]:
+            yield i, priority
 
 
 @explicit

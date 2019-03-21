@@ -76,7 +76,7 @@ class FidgetFilePath(Fidget[Path]):
 
     def init_ui(self, dialog=None):
         super().init_ui()
-        self.dialog = self._args_to_filedialog(first_valid(dialog=dialog, DIALOG=self.DIALOG))
+        self.dialog = self._args_to_filedialog(first_valid(dialog=dialog, DIALOG=self.DIALOG, _self=self))
 
         if self.exist_cond:
             self.dialog.setFileMode(QFileDialog.ExistingFile)

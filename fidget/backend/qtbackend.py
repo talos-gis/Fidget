@@ -36,6 +36,13 @@ class QtBackend(ABC):
         """
         pass
 
+    @abstractmethod
+    def module(self, name):
+        """
+        import the module and returns it
+        """
+        pass
+
     def partial(self, name: str):
         """
         :param name: the namespace to import from
@@ -67,6 +74,9 @@ class NamePrefixQtBackend(QtBackend):
             name += '.' + sub_name
         self.modules[sub_name] = ret = import_module(name)
         return ret
+
+    def module(self, name):
+        return self.load_module(name)
 
     def __getitem__(self, item):
         sub_mod, symbol = item

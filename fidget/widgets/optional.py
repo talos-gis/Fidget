@@ -65,7 +65,7 @@ class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
         :param kwargs: forwarded to Fidget
         """
 
-        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
+        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE, _self=self).template_of()
 
         inner_template.extract_default(sink=kwargs, upper_space=self)
 
@@ -97,7 +97,7 @@ class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
 
     def init_ui(self, layout_cls=None):
         super().init_ui()
-        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
+        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS, _self=self)
 
         layout = layout_cls(self)
 
@@ -132,18 +132,21 @@ class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
             self.inner.validate(v)
 
     def plaintext_printers(self):
-        yield from super().plaintext_printers()
-        for ip in self.inner.plaintext_printers():
-            if is_trivial_printer(ip):
-                continue
-
+        def printer_wrapper(ip):
             @wraps(ip)
             def wrapper(v):
                 if v is self.none_value:
                     raise PlaintextPrintError(f'this printer cannot handle {v!r}')
                 return ip(v)
 
-            yield wrapper
+            return wrapper
+
+        yield from super().plaintext_printers()
+        for ip in self.inner.plaintext_printers():
+            if is_trivial_printer(ip):
+                continue
+
+            yield printer_wrapper(ip)
 
     def plaintext_parsers(self):
         yield from super().plaintext_parsers()

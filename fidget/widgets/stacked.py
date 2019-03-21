@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TypeVar, Generic, Iterable, Tuple, Union, Type, List, Dict
 
 from collections import namedtuple
-from functools import partial
+from functools import partial, update_wrapper
 from abc import abstractmethod
 from itertools import chain
 
@@ -184,7 +184,7 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
         """
         self.inner_templates = dict(
             self._to_name_subtemplate(o) for o in
-            only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES)
+            only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES, _self=self)
         )
 
         FidgetTemplate.extract_default(*self.inner_templates.values(), sink=kwargs, upper_space=self, union=True)
@@ -195,7 +195,7 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
 
         self.selector: FidgetStacked.Selector = None
 
-        selector_cls = first_valid(selector_cls=selector_cls, SELECTOR_CLS=self.SELECTOR_CLS)
+        selector_cls = first_valid(selector_cls=selector_cls, SELECTOR_CLS=self.SELECTOR_CLS, _self=self)
         if isinstance(selector_cls, str):
             selector_cls = self.selectors[selector_cls]
         self.selector_cls = selector_cls
@@ -216,7 +216,7 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
         if frame_style is not None:
             frame.setFrameStyle(frame_style)
 
-        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
+        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS, _self=self)
 
         layout = layout_cls()
 
@@ -274,6 +274,7 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
                 continue
             for p in o.plaintext_parsers():
                 new_parser = partial(parser_wrap, n, p)
+                update_wrapper(new_parser, p)
 
                 new_parser.__name__ = n + ': ' + p.__name__
                 yield new_parser

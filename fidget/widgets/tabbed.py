@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Union, Mapping, Iterable, Tuple, TypeVar, Dict, Type, Any
+from typing import Union, Mapping, Iterable, Tuple, TypeVar, Dict, Any
 
-from fidget.backend.QtWidgets import QVBoxLayout, QFrame, QScrollArea, QWidget, QBoxLayout
+from fidget.backend.QtWidgets import QVBoxLayout, QTabWidget, QWidget
+from fidget.backend.Resources import ok_icon, error_icon
 
 from fidget.core import Fidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
     PlaintextPrintError, PlaintextParseError, FidgetTemplate, explicit, json_parser, TemplateLike, json_printer
-from fidget.core.__util__ import first_valid
 
 from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
 from fidget.widgets.__util__ import only_valid
@@ -16,22 +16,10 @@ NamedTemplate = Union[
     TemplateLike[T], Tuple[str, TemplateLike[T]]
 ]
 
+# todo document
 
-class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
-    """
-    A Fidget that wraps multiple Fidgets into a dict with str keys
-    """
-    def __init__(self, title, inner_templates: Iterable[NamedTemplate] = None, frame_style=None,
-                 layout_cls: Type[QBoxLayout] = None, scrollable=None, **kwargs):
-        """
-        :param title: the title
-        :param inner_templates: an iterable of name-templates to act as key-value pairs
-        :param frame_style: the frame style to apply to the encompassing frame, if any
-        :param layout_cls: the class of the layout
-        :param scrollable: whether to make the widget scrollable
-        :param kwargs: forwarded to Fidget
-        """
-
+class FidgetTabs(MultiFidgetWrapper[Any, Mapping[str, Any]]):
+    def __init__(self, title, inner_templates: Iterable[NamedTemplate] = None, **kwargs):
         inner_templates = dict(
             self._to_name_subtemplate(o) for o in
             only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES, _self=self)
@@ -40,59 +28,42 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
         FidgetTemplate.extract_default(*inner_templates.values(), sink=kwargs, upper_space=self)
 
         super().__init__(title, **kwargs)
+        self.tabbed: QTabWidget = None
+        self.summary_layout = None
 
         self.inner_templates = inner_templates
 
         self.inners: Dict[str, Fidget] = None
 
-        frame_style = frame_style or self.FRAME_STYLE
-
-        self.init_ui(frame_style=frame_style, layout_cls=layout_cls, scrollable=scrollable)
+        self.init_ui()
 
     INNER_TEMPLATES: Iterable[NamedTemplate] = None
-    LAYOUT_CLS = QVBoxLayout
-    FRAME_STYLE = None
-    SCROLLABLE = True
 
-    def init_ui(self, frame_style=None, layout_cls=None, scrollable=None):
+    def init_ui(self):
         super().init_ui()
 
-        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS, _self=self)
+        layout = QVBoxLayout()
 
-        owner = self
-        scrollable = first_valid(scrollable=scrollable, SCROLLABLE=self.SCROLLABLE, _self=self)
-
-        owner_layout = QVBoxLayout()
-        owner.setLayout(owner_layout)
-
-        if scrollable:
-            owner = QScrollArea(owner)
-            owner.setWidgetResizable(True)
-            owner_layout.addWidget(owner)
-
-        master = QWidget()
-        master_layout = layout_cls(master)
-
-        if scrollable:
-            owner.setWidget(master)
-        else:
-            owner_layout.addWidget(master)
-
-        frame = QFrame()
-        if frame_style is not None:
-            frame.setFrameStyle(frame_style)
-
-        layout = layout_cls(frame)
+        self.tabbed = QTabWidget()
+        self.summary_layout = QVBoxLayout()
 
         self.inners = {}
-        with self.setup_provided(master_layout, layout):
-            for name, template in self.inner_templates.items():
-                inner = template()
+        for name, template in self.inner_templates.items():
+            inner = template.set_default(make_title = False)()
 
-                if self.inners.setdefault(name, inner) is not inner:
-                    raise TypeError(f'duplicate inner name: {name}')
-                inner.on_change.connect(self.change_value)
-                layout.addWidget(inner)
+            if self.inners.setdefault(name, inner) is not inner:
+                raise TypeError(f'duplicate inner name: {name}')
+            inner.on_change.connect(self.change_value)
+            self.tabbed.addTab(inner, inner.title)
+
+        with self.setup_provided(self.summary_layout):
+            pass
+        if self.summary_layout.count():
+            summary = QWidget()
+            summary.setLayout(self.summary_layout)
+            self.tabbed.addTab(summary, 'summary')
+        else:
+            self.summary_layout = None
 
         if not self.inners:
             raise ValueError('at least one inner fidget must be provided')
@@ -100,9 +71,10 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
             next(iter(self.inners.values()))
         )
 
-        master_layout.addWidget(frame)
+        layout.addWidget(self.tabbed)
+        self.setLayout(layout)
 
-        return master_layout
+        return layout
 
     @staticmethod
     def _to_name_subtemplate(option: NamedTemplate) -> Tuple[str, FidgetTemplate[T]]:
@@ -193,3 +165,9 @@ class FidgetDict(MultiFidgetWrapper[Any, Mapping[str, Any]]):
         if not all(sw.fill for sw in self.inners.values()):
             return None
         return self._fill
+
+    def indication_changed(self, value):
+        if self.summary_layout:
+            icon = ok_icon if value.is_ok() else error_icon
+            self.tabbed.setTabIcon(len(self.inners), icon())
+

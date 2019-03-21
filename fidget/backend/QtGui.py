@@ -11,6 +11,8 @@ __backend__ = load()
 
 _QtGui = __backend__.partial('QtGui')
 
+QtGui = __backend__.module('QtGui')
+
 QDesktopServices: Type[PyQt5.QtGui.QDesktopServices] = _QtGui['QDesktopServices']
 QColor: Type[PyQt5.QtGui.QColor] = _QtGui['QColor']
 QCursor: Type[PyQt5.QtGui.QCursor] = _QtGui['QCursor']

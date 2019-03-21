@@ -15,10 +15,12 @@ from fidget.widgets.optional import FidgetOptional
 from fidget.widgets.text import FidgetPlainTextEdit
 from fidget.widgets.spin import FidgetSpin, FidgetDiscreteSpin
 from fidget.widgets.stacked import FidgetStacked
+from fidget.widgets.tabbed import FidgetTabs
 from fidget.widgets.table import FidgetTable
 from fidget.widgets.multi_tuple import FidgetTuple
 from fidget.widgets.user_util import FidgetInt, FidgetFloat, FidgetComplex, SimpleLineEdit, template, SimplePlainEdit
 
+# todo scrollable wrapper?
 # todo multi-file widget
 # todo directory widget
 # todo multi-directory widget
@@ -27,3 +29,8 @@ from fidget.widgets.user_util import FidgetInt, FidgetFloat, FidgetComplex, Simp
 # todo script editor widget?
 # todo slider widget
 # todo date widget
+
+# todo clear button to qlineedit
+
+# todo use qtablewidget
+# todo there's a lot of repeated code here

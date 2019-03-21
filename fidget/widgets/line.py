@@ -4,7 +4,7 @@ import re
 
 from fidget.backend.QtWidgets import QLineEdit, QHBoxLayout
 
-from fidget.core import Fidget, inner_plaintext_parser, ValidationError
+from fidget.core import Fidget, inner_plaintext_parser, ValidationError, low_priority
 
 from fidget.widgets.__util__ import optional_valid
 
@@ -32,13 +32,13 @@ class FidgetLineEdit(Fidget[str]):
         """
         super().__init__(title, **kwargs)
 
-        pattern = optional_valid(pattern=pattern, PATTERN=self.PATTERN)
+        pattern = optional_valid(pattern=pattern, PATTERN=self.PATTERN, _self=self)
 
         self.pattern: Optional[Pattern[str]] = re.compile(pattern) if isinstance(pattern, str) else pattern
         self.allowed_characters = optional_valid(allowed_characters=allowed_characters,
-                                                 ALLOWED_CHARACTERS=self.ALLOWED_CHARACTERS)
+                                                 ALLOWED_CHARACTERS=self.ALLOWED_CHARACTERS, _self=self)
         self.forbidden_characters = optional_valid(forbidden_characters=forbidden_characters,
-                                                   FORBIDDEN_CHARACTERS=self.FORBIDDEN_CHARACTERS)
+                                                   FORBIDDEN_CHARACTERS=self.FORBIDDEN_CHARACTERS, _self=self)
 
         self.edit: QLineEdit = None
 
@@ -87,6 +87,7 @@ class FidgetLineEdit(Fidget[str]):
                 raise ValidationError(f'character {c} (position {i}) is forbidden')
 
     @inner_plaintext_parser
+    @low_priority
     def raw_text(self, v):
         return v
 

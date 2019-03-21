@@ -5,20 +5,21 @@ from io import StringIO
 import csv
 from collections import namedtuple
 
-from fidget.backend.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QMenu, QStyle, QApplication, QVBoxLayout, \
+from fidget.backend.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QMenu, QApplication, QVBoxLayout, \
     QScrollArea, QWidget, QLabel
 from fidget.backend.QtCore import Qt
 from fidget.backend.QtGui import QCursor
+from fidget.backend.Resources import add_row_below_icon, add_row_above_icon, del_row_icon
 
 from fidget.core import TemplateLike, Fidget, FidgetTemplate, ParseError, ValidationError, \
     inner_plaintext_printer, inner_plaintext_parser, json_parser, PlaintextPrintError, PlaintextParseError, json_printer
-from fidget.core.__util__ import first_valid
+from fidget.core.__util__ import first_valid, update
 
 from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
 from fidget.widgets.user_util import FidgetInt
 from fidget.widgets.confirmer import FidgetQuestion
-from fidget.widgets.__util__ import only_valid, last_focus_proxy, wrap, repeat_last, valid_between, CountBounds, \
-    table_printer
+from fidget.widgets.__util__ import only_valid, last_focus_proxy, repeat_last, valid_between, CountBounds, \
+    table_printer, to_identifier
 
 T = TypeVar('T')
 
@@ -30,22 +31,23 @@ T = TypeVar('T')
 
 
 class FidgetTable(Generic[T], MultiFidgetWrapper[object, List[NamedTuple]]):
-    def __init__(self, title:str, inner_templates: Iterable[TemplateLike[T]] = None, layout_cls=None,
+    def __init__(self, title: str, inner_templates: Iterable[TemplateLike[T]] = None, layout_cls=None,
                  rows: CountBounds = None,
                  row_button_text_func: Callable[[int], str] = None,
                  scrollable=None,
                  **kwargs):
-        self.row_bounds = CountBounds[first_valid(rows=rows, ROWS=self.ROWS)]
+        self.row_bounds = CountBounds[first_valid(rows=rows, ROWS=self.ROWS, _self=self)]
 
         inner_templates = tuple(
-            t.template_of() for t in only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES)
+            t.template_of() for t in
+            only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES, _self=self)
         )
 
         super().__init__(title, **kwargs)
 
         self.inner_templates = inner_templates
         self.row_button_text_func = first_valid(row_button_text_func=row_button_text_func,
-                                                ROW_BUTTON_TEXT_FUNC=self.ROW_BUTTON_TEXT_FUNC)
+                                                ROW_BUTTON_TEXT_FUNC=self.ROW_BUTTON_TEXT_FUNC, _self=self)
 
         self.grid_layout: QGridLayout = None
         self.inners: List[List[Fidget[T]]] = None  # first row, then column, self.inners[row][column]
@@ -70,10 +72,10 @@ class FidgetTable(Generic[T], MultiFidgetWrapper[object, List[NamedTuple]]):
 
     def init_ui(self, layout_cls=None, scrollable=None):
         super().init_ui()
-        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS)
+        layout_cls = first_valid(layout_cls=layout_cls, LAYOUT_CLS=self.LAYOUT_CLS, _self=self)
 
         owner = self
-        scrollable = first_valid(scrollable=scrollable, SCROLLABLE=self.SCROLLABLE)
+        scrollable = first_valid(scrollable=scrollable, SCROLLABLE=self.SCROLLABLE, _self=self)
 
         owner_layout = QVBoxLayout()
         owner.setLayout(owner_layout)
@@ -117,12 +119,13 @@ class FidgetTable(Generic[T], MultiFidgetWrapper[object, List[NamedTuple]]):
 
             self.column_count = len(self.inner_templates)
 
-            self.value_type = namedtuple(self.title, field_names, rename=True)
-
             for i in range(self.row_bounds.initial):
                 self.add_row(i)
 
             master_layout.addLayout(self.grid_layout)
+
+        self.value_type = namedtuple(to_identifier(self.title), (to_identifier(i.title) for i in self.inners),
+                                     rename=True)
 
         if title_in_grid and self.title_label:
             self.grid_layout.addWidget(self.title_label, 0, 0)
@@ -208,20 +211,20 @@ class FidgetTable(Generic[T], MultiFidgetWrapper[object, List[NamedTuple]]):
             self.del_row(row_index)
             self.apply_matrix()
 
-        ret.add_top_action = menu.addAction(self.style().standardIcon(QStyle.SP_ArrowUp), 'add row above', add_top)
+        ret.add_top_action = menu.addAction(add_row_above_icon(), 'add row above', add_top)
         ret.add_top_action.setEnabled(False)
 
         ret.add_many_top_action = menu.addAction('add rows above', add_many_top)
         ret.add_many_top_action.setEnabled(False)
 
-        ret.add_bottom_action = menu.addAction(self.style().standardIcon(QStyle.SP_ArrowDown), 'add row below',
+        ret.add_bottom_action = menu.addAction(add_row_below_icon(), 'add row below',
                                                add_bottom)
         ret.add_bottom_action.setEnabled(False)
 
         ret.add_many_bottom_action = menu.addAction('add rows below', add_many_bottom)
         ret.add_many_bottom_action.setEnabled(False)
 
-        ret.del_action = menu.addAction(self.style().standardIcon(QStyle.SP_DialogCloseButton), 'delete row', del_)
+        ret.del_action = menu.addAction(del_row_icon(), 'delete row', del_)
         ret.del_action.setEnabled(False)
 
         @ret.clicked.connect
@@ -433,15 +436,15 @@ class FidgetTable(Generic[T], MultiFidgetWrapper[object, List[NamedTuple]]):
             raise PlaintextParseError(f'too many elements, expected {size}')
         return ret
 
-    markdown = inner_plaintext_printer(wrap(table_printer((
+    markdown = inner_plaintext_printer(update(__name__='markdown')(table_printer((
         ('|', '|'),
         ('|', '|'),
         ('|', '|')
-    ), '|', '\n', header_row=lambda self: self.value_type._fields), __name__='markdown'))
+    ), '|', '\n', header_row=lambda self: self.value_type._fields)))
 
     def plaintext_parsers(self):
         yield from super().plaintext_parsers()
-        yield wrap(self.from_json_reshape, __explicit__=not self.is_constant_size)
+        yield maks(self.from_json_reshape, __explicit__=not self.is_constant_size)
 
     def string_matrix(self, v):
         ret = []

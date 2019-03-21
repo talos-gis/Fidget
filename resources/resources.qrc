@@ -1,0 +1,11 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource prefix="fidget/">
+    <file>feather/alert-triangle.svg</file>
+    <file>feather/check.svg</file>
+    <file>feather/corner-down-right.svg</file>
+    <file>feather/corner-left-down.svg</file>
+    <file>feather/corner-right-down.svg</file>
+    <file>feather/corner-up-right.svg</file>
+    <file>feather/delete.svg</file>
+</qresource>
+</RCC>

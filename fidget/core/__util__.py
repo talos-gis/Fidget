@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from fidget.backend.QtWidgets import QLabel
-from fidget.backend.QtCore import Qt
-
 from typing import Union, Callable, Any, Tuple, Type, TypeVar, Optional
 
-from functools import wraps
+from fidget.backend.QtWidgets import QLabel
+from fidget.backend.QtCore import Qt, QtCore
+
+from functools import wraps, lru_cache
 
 T = TypeVar('T')
 
@@ -72,11 +72,15 @@ def exc_wrap(to_raise: Type[Exception]):
     return ret
 
 
-def first_valid(_invalid=None, **kwargs: Optional[T]) -> T:
+def first_valid(_invalid=None, _self=None, **kwargs: Optional[T]) -> T:
     try:
         return next(a for a in kwargs.values() if a is not _invalid)
     except StopIteration as e:
-        raise TypeError(f'none of {", ".join(kwargs.keys())} provided') from e
+        if _self:
+            self_str = f' in {_self}'
+        else:
+            self_str = ''
+        raise TypeError(f'none of {", ".join(kwargs.keys())} provided{self_str}') from e
 
 
 def shorten(s: str, width: int, filler='...'):
@@ -90,4 +94,24 @@ def link_to(text: str, url: str):
     ret = QLabel(f'''<a href='{url}'>{text}</a>''')
     ret.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
     ret.setOpenExternalLinks(True)
+    return ret
+
+@lru_cache(None)
+def mask(func, **kwargs):
+    @wraps(func)
+    def ret(*a, **k):
+        return func(*a, **k)
+
+    for k, v in kwargs.items():
+        setattr(ret, k, v)
+
+    return ret
+
+
+def update(**kwargs):
+    def ret(func):
+        for k, v in kwargs.items():
+            setattr(func, k, v)
+        return func
+
     return ret

@@ -7,7 +7,7 @@ from fidget.core import Fidget, PlaintextPrintError, inner_plaintext_parser, Pla
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.user_util import FidgetFloat, FidgetInt
-from fidget.widgets.__util__ import optional_valid, only_valid, TolerantDict, PrefixTrie
+from fidget.widgets.__util__ import optional_valid, only_valid, TolerantDict
 
 
 # todo document
@@ -18,27 +18,27 @@ class FidgetSpin(Fidget[float]):
     MAKE_PLAINTEXT = False
 
     def __init__(self, title, minimum=None, maximum=None, step=None, force_float=None, prefix=None, suffix=None,
-                 decimals=None, **kwargs):
+                 decimals=None, initial_value=None, **kwargs):
         super().__init__(title, **kwargs)
-        minimum = first_valid(minimum=minimum, MINIMUM=self.MINIMUM)
-        maximum = first_valid(maximum=maximum, MAXIMUM=self.MAXIMUM)
-        step = first_valid(step=step, STEP=self.STEP)
-        decimals = optional_valid(decimals=decimals, DECIMALS=self.DECIMALS)
+        minimum = first_valid(minimum=minimum, MINIMUM=self.MINIMUM, _self=self)
+        maximum = first_valid(maximum=maximum, MAXIMUM=self.MAXIMUM, _self=self)
+        step = first_valid(step=step, STEP=self.STEP, _self=self)
+        decimals = optional_valid(decimals=decimals, DECIMALS=self.DECIMALS, _self=self)
 
-        force_float = first_valid(force_float=force_float, FORCE_FLOAT=self.FORCE_FLOAT)
+        force_float = first_valid(force_float=force_float, FORCE_FLOAT=self.FORCE_FLOAT, _self=self)
 
         self.use_float = force_float or (decimals is not None) \
                          or any(isinstance(i, float) for i in (minimum, maximum, step))
 
-        prefix = optional_valid(prefix=prefix, PREFIX=self.PREFIX)
-        suffix = optional_valid(suffix=suffix, SUFFIX=self.SUFFIX)
+        prefix = optional_valid(prefix=prefix, PREFIX=self.PREFIX, _self=self)
+        suffix = optional_valid(suffix=suffix, SUFFIX=self.SUFFIX, _self=self)
 
         self.spin: Union[QSpinBox, QDoubleSpinBox] = None
 
         self.init_ui(minimum=minimum, maximum=maximum, step=step, use_float=self.use_float, prefix=prefix,
-                     suffix=suffix, decimals=decimals)
+                     suffix=suffix, decimals=decimals, initial_value=initial_value)
 
-    def init_ui(self, minimum=None, maximum=None, step=None, use_float=None, prefix=None, suffix=None, decimals=None):
+    def init_ui(self, minimum=None, maximum=None, step=None, use_float=None, prefix=None, suffix=None, decimals=None, initial_value=None):
         super().init_ui()
 
         layout = QHBoxLayout()
@@ -68,6 +68,10 @@ class FidgetSpin(Fidget[float]):
         else:
             self.add_plaintext_delegates(FidgetInt)
 
+        initial_value = optional_valid(initial_value=initial_value, INITIAL_VALUE=self.INITIAL_VALUE, _self=self)
+        if initial_value:
+            self.spin.setValue(initial_value)
+
         self.setFocusProxy(self.spin)
         self.setLayout(layout)
 
@@ -86,6 +90,7 @@ class FidgetSpin(Fidget[float]):
     PREFIX = None
     SUFFIX = None
     DECIMALS = None
+    INITIAL_VALUE = None
 
 
 T = TypeVar('T')
@@ -101,10 +106,10 @@ class FidgetDiscreteSpin(Generic[T], Fidget[T]):
                  **kwargs):
         super().__init__(title, **kwargs)
 
-        options = only_valid(options=options, OPTIONS=self.OPTIONS)
-        initial_index = optional_valid(initial_index=initial_index, INITIAL_INDEX=self.INITIAL_INDEX)
-        initial_value = first_valid(initial_value=initial_value, INITIAL_VALUE=self.INITIAL_VALUE)
-        wrap = first_valid(wrap=wrap, WRAP=self.WRAP)
+        options = only_valid(options=options, OPTIONS=self.OPTIONS, _self=self)
+        initial_index = optional_valid(initial_index=initial_index, INITIAL_INDEX=self.INITIAL_INDEX, _self=self)
+        initial_value = first_valid(initial_value=initial_value, INITIAL_VALUE=self.INITIAL_VALUE, _self=self)
+        wrap = first_valid(wrap=wrap, WRAP=self.WRAP, _self=self)
 
         self.options: List[Tuple[str, T]] = []
         self.opt_lookup: TolerantDict[T, int] = TolerantDict()

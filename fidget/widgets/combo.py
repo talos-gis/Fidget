@@ -1,10 +1,10 @@
-from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, List
+from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, Sequence
 
 from fidget.backend.QtWidgets import QComboBox, QHBoxLayout
 
 from fidget.core import Fidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
 
-from fidget.widgets.__util__ import TolerantDict
+from fidget.widgets.__util__ import TolerantDict, only_valid
 
 T = TypeVar('T')
 
@@ -16,7 +16,7 @@ class FidgetCombo(Generic[T], Fidget[T]):
     NO_DEFAULT_VALUE = object()
     MAKE_TITLE = MAKE_PLAINTEXT = MAKE_INDICATOR = False
 
-    def __init__(self, title, options: Iterable[Union[Tuple[str, T], T]], default_index=-1,
+    def __init__(self, title, options: Iterable[Union[Tuple[str, T], T]] = None, default_index=-1,
                  default_value: T = NO_DEFAULT_VALUE, **kwargs):
         """
         :param title: the title
@@ -28,7 +28,7 @@ class FidgetCombo(Generic[T], Fidget[T]):
         super().__init__(title, **kwargs)
         self.default_index = default_index
         self.default_value = default_value
-        self.options = options
+        self.options = only_valid(options=options, OPTIONS=self.OPTIONS, _self=self)
 
         self._opt_lookup: TolerantDict[T, Tuple[int, str]] = None
         self._opt_lookup_name: Dict[str, Tuple[int, T]] = None
@@ -51,12 +51,14 @@ class FidgetCombo(Generic[T], Fidget[T]):
 
             ind = self.default_index
             for i, value in enumerate(self.options):
-                name, value = self.extract_name_and_value(value)
+                names, value = self.extract_name_and_value(value)
+                name = names[0]
                 self.combo_box.addItem(name, value)
                 if value == self.default_value:
                     ind = i
 
-                self._opt_lookup_name[name] = (i, value)
+                for n in names:
+                    self._opt_lookup_name[n] = (i, value)
                 self._opt_lookup[value] = (i, name)
 
             self.combo_box.setCurrentIndex(ind)
@@ -65,21 +67,32 @@ class FidgetCombo(Generic[T], Fidget[T]):
         self.setFocusProxy(self.combo_box)
         return layout
 
+    OPTIONS = None
+
     def parse(self):
         if self.combo_box.currentIndex() == -1:
             raise ParseError('value is unset', offender=self.combo_box)
         return self.combo_box.currentData()
 
-    def extract_name_and_value(self, value: Union[Tuple[str, T], T]) -> Tuple[str, T]:
+    def extract_name_and_value(self, value: Union[Tuple[str, T], T]) -> Tuple[Sequence[str], T]:
+        names = []
+
         if isinstance(value, tuple) and len(value) == 2 and isinstance(value[0], str):
-            return value
+            names.append(value[0])
+            value = value[1]
 
-        try:
-            name = self.joined_plaintext_printer(value)
-        except PlaintextPrintError as e:
-            raise Exception('the joined printer raised an exception for a combo option') from e
+        for printer in self.implicit_plaintext_printers():
+            try:
+                name = printer(value)
+            except PlaintextPrintError as e:
+                pass
+            else:
+                names.append(name)
 
-        return name, value
+        if not names:
+            print(f'member has no names: {value}')
+
+        return names, value
 
     def fill(self, key: Union[T, int]):
         try:
@@ -100,23 +113,3 @@ class FidgetCombo(Generic[T], Fidget[T]):
             raise PlaintextParseError('name not found') from e
         else:
             return ret
-
-
-if __name__ == '__main__':
-    from fidget.backend import QApplication
-    from enum import Enum, auto
-
-
-    class Options(Enum):
-        first = auto()
-        second = auto()
-        third = auto()
-
-
-    app = QApplication([])
-    w = FidgetCombo('sample', options=Options)
-    w.show()
-    w.fill_from_text('Options.first')
-    res = app.exec_()
-    print(w.value())
-    exit(res)

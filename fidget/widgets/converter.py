@@ -31,7 +31,7 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
         :param kwargs: forwarded to either the inner template or Fidget
         """
 
-        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE).template_of()
+        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE, _self=self).template_of()
 
         template_args = {}
 
@@ -126,8 +126,7 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
         return self.back_converter_func
 
     def plaintext_parsers(self):
-        yield from super().plaintext_parsers()
-        for parser in self.inner.plaintext_parsers():
+        def wrap_parser(parser):
             @wraps(parser)
             def p(*args, **kwargs):
                 f = parser(*args, **kwargs)
@@ -136,7 +135,11 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
                 except ParseError as e:
                     raise PlaintextParseError from e
 
-            yield p
+            return p
+
+        yield from super().plaintext_parsers()
+        for parser in self.inner.plaintext_parsers():
+            yield wrap_parser(parser)
 
     def plaintext_printers(self):
         def wrap_printer(printer):
