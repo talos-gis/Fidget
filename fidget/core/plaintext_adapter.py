@@ -6,7 +6,7 @@ from functools import wraps, lru_cache, partial
 from textwrap import indent
 from enum import IntEnum
 
-from fidget.backend.QtWidgets import QDialog
+from fidget.backend.QtWidgets import QDialog, QApplication
 
 from fidget.core.primitive_questions import FormatSpecQuestion, FormattedStringQuestion, ExecStringQuestion, \
     EvalStringQuestion
@@ -149,13 +149,14 @@ def join_printers(printers: Callable[[], Iterable[PlaintextPrinter]]):
                 continue
             if prio < 0:
                 break
-
             seen.add(p)
 
             try:
-                return p(s)
+                ret = p(s)
             except PlaintextPrintError as e:
                 first_error = first_error or e
+            else:
+                return ret
         raise first_error or PlaintextPrintError('no printers')
 
     ret.__name__ = '<all>'

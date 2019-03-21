@@ -1,4 +1,10 @@
 # Fidget Changelog
+## 0.0.6- unreleased
+## Added
+* tabs can now handle arrow keys to switch tabs
+## Changed
+* Major Code refactoring in `widgets`, including:
+    * Common superclass to `FidgetDict` and `FidgetTabs`
 ## 0.0.5- 2019-03-21
 ## Added
 * FidgetSpin has initial value parameter

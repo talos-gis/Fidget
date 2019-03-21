@@ -90,7 +90,7 @@ class FidgetCombo(Generic[T], Fidget[T]):
                 names.append(name)
 
         if not names:
-            print(f'member has no names: {value}')
+            raise Exception(f'member has no names: {value}')
 
         return names, value
 

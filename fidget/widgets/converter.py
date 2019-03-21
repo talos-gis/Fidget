@@ -30,7 +30,6 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
         :param back_converter_func: a backwards conversion function
         :param kwargs: forwarded to either the inner template or Fidget
         """
-
         inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE, _self=self).template_of()
 
         template_args = {}
@@ -61,10 +60,10 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
         super().init_ui()
 
         layout_cls = layout_cls or self.LAYOUT_CLS
-        layout = layout_cls(self)
+        self.layout = layout_cls()
 
         self.inner = self.inner_template()
-        layout.addWidget(self.inner)
+        self.layout.addWidget(self.inner)
         self.setMinimumSize(self.inner.minimumSize())
         self.setMaximumSize(self.inner.maximumSize())
 
@@ -84,6 +83,8 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
             self.inner.plaintext_button.clicked.disconnect(self.inner._plaintext_btn_click)
             self.inner.plaintext_button.clicked.connect(self._plaintext_btn_click)
 
+            self.keep.append(self._plaintext_widget)
+
             self._plaintext_widget = self.inner._plaintext_widget
             self._plaintext_widget.owner = self
 
@@ -93,13 +94,17 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
             self.inner.indicator_label.linkActivated.disconnect(self.inner._detail_button_clicked)
             self.inner.indicator_label.linkActivated.connect(self._detail_button_clicked)
 
+            self.keep.append(self.indicator_label)
+
             self.indicator_label = self.inner.indicator_label
             self.make_indicator = True
 
+
         self.inner.on_change.connect(self.change_value)
         self.setFocusProxy(self.inner)
+        self.setLayout(self.layout)
 
-        return layout
+        return self.layout
 
     def provided_pre(self, *args, **kwargs):
         return self.inner.provided_pre(*args, **kwargs)
@@ -113,7 +118,8 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
 
     def validate(self, value: T):
         if self.back_convert:
-            self.inner.validate(self.back_convert(value))
+            bc = self.back_convert(value)
+            self.inner.validate(bc)
         super().validate(value)
 
     def convert(self, v: F) -> T:
@@ -149,16 +155,13 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
                 return printer(f)
 
             return p
-
+        yield from super().plaintext_printers()
         if self.back_convert:
-            yield from super().plaintext_printers()
             for printer in self.inner.plaintext_printers():
                 if is_trivial_printer(printer):
                     continue
 
                 yield wrap_printer(printer)
-        else:
-            yield from super().plaintext_printers()
 
     NO_FILL = object()
 

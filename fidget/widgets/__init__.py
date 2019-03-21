@@ -2,7 +2,7 @@ from fidget.widgets.checkbox import FidgetCheckBox
 from fidget.widgets.combo import FidgetCombo
 from fidget.widgets.confirmer import FidgetConfirmer, FidgetQuestion, question
 from fidget.widgets.converter import FidgetConverter, FidgetTransparentConverter
-from fidget.widgets.multi_dict import FidgetDict
+from fidget.widgets.dict_ import FidgetDict
 from fidget.widgets.edit_combo import FidgetEditCombo
 from fidget.widgets.file_path import FidgetFilePath
 from fidget.widgets.idiomatic_inner import inner_fidget

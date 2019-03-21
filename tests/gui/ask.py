@@ -1,10 +1,13 @@
-from fidget.widgets import question, FidgetFloat, template
+from fidget.backend import prefer
+
+#prefer('PyQt5')
+
+from fidget.widgets import *
 
 from tests.gui.__util__ import test_as_main
 
-
-@test_as_main(close_on_confirm=True, cancel_value=None)
-@question(cancel_value=None)
-@template('sample')
-class _(FidgetFloat):
-    MAKE_PLAINTEXT = True
+test_as_main()(FidgetInt.template('sample'))
+#@question(cancel_value=None)
+#@template('sample')
+#class _(FidgetInt):
+#    MAKE_PLAINTEXT = True

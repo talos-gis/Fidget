@@ -150,7 +150,7 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
     """
     A QWidget that can contain a value, parsed form its children widgets.
     """
-    on_change = pyqtSignal()
+    on_change: pyqtSignal
 
     # region inherit_me
     """
@@ -571,7 +571,6 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
             details = self.joined_plaintext_printer(value)
         except PlaintextPrintError as e:
             details = 'details could not be loaded because of a parser error:\n' + error_details(e)
-
         self._value = GoodValue(value, details)
 
     def _detail_button_clicked(self, event):

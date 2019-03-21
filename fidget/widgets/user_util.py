@@ -1,7 +1,5 @@
 from typing import TypeVar, Generic
 
-from functools import partial
-
 from fidget.core import format_printer, regex_parser, PlaintextParseError, wrap_plaintext_parser, Fidget, \
     TemplateLike, inner_plaintext_parser, ParseError
 
@@ -9,6 +7,7 @@ from fidget.widgets.line import FidgetLineEdit
 from fidget.widgets.text import FidgetPlainTextEdit
 from fidget.widgets.converter import FidgetConverter
 from fidget.widgets.__util__ import parse_int
+
 T = TypeVar('T')
 
 
@@ -31,7 +30,8 @@ class SimpleLineEdit(Generic[T], FidgetConverter[str, T]):
 
     def back_convert(self, v: T):
         printer = self.joined_plaintext_printer
-        return printer(v)
+        ret = printer(v)
+        return ret
 
     def convert(self, v: str) -> T:
         parser = self.joined_plaintext_parser
@@ -89,6 +89,12 @@ class FidgetInt(SimpleLineEdit[int]):
     A line edit that converts the value to int
     """
     _func = inner_plaintext_parser(staticmethod(wrap_plaintext_parser(ValueError, parse_int)))
+    _cls_printers = [
+        format_printer('n'),
+        format_printer(','),
+        format_printer('_b'),
+        format_printer('_X')
+    ]
 
     @classmethod
     def cls_plaintext_printers(cls):
@@ -96,10 +102,7 @@ class FidgetInt(SimpleLineEdit[int]):
         yield hex
         yield bin
         yield oct
-        yield format_printer('n')
-        yield format_printer(',')
-        yield format_printer('_b')
-        yield format_printer('_X')
+        yield from cls._cls_printers
 
 
 class FidgetFloat(SimpleLineEdit[float]):
@@ -107,6 +110,12 @@ class FidgetFloat(SimpleLineEdit[float]):
     A line edit that converts the value to float
     """
     _func = inner_plaintext_parser(staticmethod(wrap_plaintext_parser(ValueError, float)))
+    _cls_printers = [
+        format_printer('f'),
+        format_printer('e'),
+        format_printer('g'),
+        format_printer('%'),
+    ]
 
     @inner_plaintext_parser
     @staticmethod
@@ -138,10 +147,7 @@ class FidgetFloat(SimpleLineEdit[float]):
     @classmethod
     def cls_plaintext_printers(cls):
         yield from super().cls_plaintext_printers()
-        yield format_printer('f')
-        yield format_printer('e')
-        yield format_printer('g')
-        yield format_printer('%')
+        yield from cls._cls_printers
 
 
 class FidgetComplex(SimpleLineEdit[complex]):
