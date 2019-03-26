@@ -1,23 +1,19 @@
-from typing import TypeVar, Generic, Iterable, Tuple, Union, Dict, Sequence
+from typing import TypeVar, Generic
 
 from fidget.backend.QtWidgets import QComboBox, QHBoxLayout
-
-from fidget.core import Fidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError, ParseError
-
-from fidget.widgets.__util__ import TolerantDict, only_valid
+from fidget.core import ParseError
+from fidget.widgets.discrete import FidgetDiscreteChoice
 
 T = TypeVar('T')
 
 
-class FidgetCombo(Generic[T], Fidget[T]):
+class FidgetCombo(Generic[T], FidgetDiscreteChoice[T]):
     """
     A ComboBox with values for each option
     """
-    NO_DEFAULT_VALUE = object()
     MAKE_TITLE = MAKE_PLAINTEXT = MAKE_INDICATOR = False
 
-    def __init__(self, title, options: Iterable[Union[Tuple[str, T], T]] = None, default_index=-1,
-                 default_value: T = NO_DEFAULT_VALUE, **kwargs):
+    def __init__(self, title, **kwargs):
         """
         :param title: the title
         :param options: an iterable of options: either bare values or str-value tuples
@@ -26,16 +22,11 @@ class FidgetCombo(Generic[T], Fidget[T]):
         :param kwargs: forwarded to Fidget
         """
         super().__init__(title, **kwargs)
-        self.default_index = default_index
-        self.default_value = default_value
-        self.options = only_valid(options=options, OPTIONS=self.OPTIONS, _self=self)
-
-        self._opt_lookup: TolerantDict[T, Tuple[int, str]] = None
-        self._opt_lookup_name: Dict[str, Tuple[int, T]] = None
 
         self.combo_box: QComboBox = None
 
         self.init_ui()
+        self.fill_initial()
 
     def init_ui(self):
         super().init_ui()
@@ -46,70 +37,19 @@ class FidgetCombo(Generic[T], Fidget[T]):
             self.combo_box = QComboBox()
             layout.addWidget(self.combo_box)
 
-            self._opt_lookup = TolerantDict()
-            self._opt_lookup_name = {}
-
-            ind = self.default_index
-            for i, value in enumerate(self.options):
-                names, value = self.extract_name_and_value(value)
+            for names, value in self.options:
                 name = names[0]
                 self.combo_box.addItem(name, value)
-                if value == self.default_value:
-                    ind = i
 
-                for n in names:
-                    self._opt_lookup_name[n] = (i, value)
-                self._opt_lookup[value] = (i, name)
-
-            self.combo_box.setCurrentIndex(ind)
             self.combo_box.currentIndexChanged.connect(self.change_value)
 
         self.setFocusProxy(self.combo_box)
         return layout
-
-    OPTIONS = None
 
     def parse(self):
         if self.combo_box.currentIndex() == -1:
             raise ParseError('value is unset', offender=self.combo_box)
         return self.combo_box.currentData()
 
-    def extract_name_and_value(self, value: Union[Tuple[str, T], T]) -> Tuple[Sequence[str], T]:
-        names = []
-
-        if isinstance(value, tuple) and len(value) == 2 and isinstance(value[0], str):
-            names.append(value[0])
-            value = value[1]
-
-        for printer in self.implicit_plaintext_printers():
-            try:
-                name = printer(value)
-            except PlaintextPrintError as e:
-                pass
-            else:
-                names.append(name)
-
-        if not names:
-            raise Exception(f'member has no names: {value}')
-
-        return names, value
-
-    def fill(self, key: Union[T, int]):
-        try:
-            index, _ = self._opt_lookup[key]
-        except KeyError as e:
-            if isinstance(key, int):
-                index = key
-            else:
-                raise KeyError('fill value is not an option') from e
-
+    def fill_index(self, index):
         self.combo_box.setCurrentIndex(index)
-
-    @inner_plaintext_parser
-    def by_name(self, name):
-        try:
-            _, ret = self._opt_lookup_name[name]
-        except KeyError as e:
-            raise PlaintextParseError('name not found') from e
-        else:
-            return ret

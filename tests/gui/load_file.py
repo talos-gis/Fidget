@@ -1,9 +1,9 @@
-from fidget.backend import prefer
+from fidget.widgets import FidgetStacked, FidgetFilePath, inner_fidget, FidgetConverter, FidgetDict, FidgetLine
 
-from fidget.backend import QWidget, QStackedWidget, QFileDialog
-from fidget.widgets import FidgetStacked, FidgetFilePath, inner_fidget, FidgetConverter, FidgetDict, FidgetLineEdit
+from tests.gui.__util__ import test_as_main
 
 
+@test_as_main('sample')
 class MakeProjectWidget(FidgetStacked):
     @inner_fidget('open', exist_cond=True)
     class Open(FidgetFilePath):
@@ -16,14 +16,10 @@ class MakeProjectWidget(FidgetStacked):
         @inner_fidget('new')
         class _(FidgetDict):
             @inner_fidget('name', pattern='.+')
-            class Name(FidgetLineEdit):
+            class Name(FidgetLine):
                 pass
 
         def convert(self, v: dict):
             return v['name']
 
     SELECTOR_CLS = 'radio'
-
-
-if __name__ == '__main__':
-    print(MakeProjectWidget.show_as_main('sample'))

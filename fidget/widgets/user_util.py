@@ -3,8 +3,8 @@ from typing import TypeVar, Generic
 from fidget.core import format_printer, regex_parser, PlaintextParseError, wrap_plaintext_parser, Fidget, \
     TemplateLike, inner_plaintext_parser, ParseError
 
-from fidget.widgets.line import FidgetLineEdit
-from fidget.widgets.text import FidgetPlainTextEdit
+from fidget.widgets.line import FidgetLine
+from fidget.widgets.text import FidgetPlainText
 from fidget.widgets.converter import FidgetConverter
 from fidget.widgets.__util__ import parse_int
 
@@ -40,7 +40,7 @@ class SimpleLineEdit(Generic[T], FidgetConverter[str, T]):
         except PlaintextParseError as e:
             raise ParseError(offender=self.inner) from e
 
-    line_edit_cls: TemplateLike[str] = FidgetLineEdit.template()
+    line_edit_cls: TemplateLike[str] = FidgetLine.template()
 
     _template_class = Fidget._template_class
 
@@ -76,7 +76,7 @@ class SimplePlainEdit(Generic[T], FidgetConverter[str, T]):
         except PlaintextParseError as e:
             raise ParseError(offender=self.inner) from e
 
-    line_edit_cls: TemplateLike[str] = FidgetPlainTextEdit.template()
+    line_edit_cls: TemplateLike[str] = FidgetPlainText.template()
 
     _template_class = Fidget._template_class
 

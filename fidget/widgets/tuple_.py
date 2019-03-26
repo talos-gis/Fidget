@@ -1,20 +1,16 @@
 from __future__ import annotations
 
-from typing import Type, Iterable, Tuple, Sequence, Any, NamedTuple
-
 from collections import namedtuple
+from typing import Type, Iterable, Tuple, NamedTuple
 
 from fidget.backend.QtWidgets import QVBoxLayout, QFrame, QBoxLayout
-
-from fidget.core import Fidget, ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
-    PlaintextPrintError, PlaintextParseError, FidgetTemplate, explicit, json_parser, TemplateLike, json_printer
+from fidget.core import PlaintextPrintError, PlaintextParseError, TemplateLike
 from fidget.core.__util__ import first_valid
+from fidget.widgets.__util__ import to_identifier
+from fidget.widgets.compound import FidgetCompound
 
-from fidget.widgets.idiomatic_inner import MultiFidgetWrapper
-from fidget.widgets.__util__ import only_valid, to_identifier
 
-
-class FidgetTuple(MultiFidgetWrapper[Any, NamedTuple]):
+class FidgetTuple(FidgetCompound[tuple]):
     """
     A Fidget that wraps multiple Fidgets into a tuple
     """
@@ -28,20 +24,46 @@ class FidgetTuple(MultiFidgetWrapper[Any, NamedTuple]):
         :param layout_cls: the class of the layout
         :param kwargs: forwarded to Fidget
         """
-        self.inner_templates = tuple(
-            t.template_of() for t in
-            only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES, _self=self)
-        )
-        FidgetTemplate.extract_default(*self.inner_templates, upper_space=self, sink=kwargs)
+        super().__init__(title, inner_templates, **kwargs)
 
-        super().__init__(title, **kwargs)
-        self.inners: Sequence[Fidget] = None
         self.value_type: Type[NamedTuple] = None
 
         self.init_ui(frame_style=frame_style, layout_cls=layout_cls)
 
     INNER_TEMPLATES: Iterable[TemplateLike] = None
     LAYOUT_CLS: Type[QBoxLayout] = QVBoxLayout
+
+    @classmethod
+    def _make_inner_templates(cls, inner_templates_param: Iterable[TemplateLike]):
+        return [i.template_of() for i in inner_templates_param]
+
+    @classmethod
+    def inner_templates_values(cls, inner_templates):
+        return inner_templates
+
+    @classmethod
+    def _make_inners(cls, inner_templates):
+        return [i() for i in inner_templates]
+
+    @classmethod
+    def inners_values(cls, inners):
+        return inners
+
+    @classmethod
+    def inners_items(cls, inners):
+        return enumerate(inners)
+
+    @classmethod
+    def init_result(cls):
+        return []
+
+    @classmethod
+    def insert_result(cls, res, key, value):
+        res.append(value)
+
+    @classmethod
+    def result_zip_subwidget(cls, res, inners):
+        return zip(enumerate(res), inners)
 
     def init_ui(self, frame_style=None, layout_cls: Type[QBoxLayout] = None):
         super().init_ui()
@@ -57,18 +79,9 @@ class FidgetTuple(MultiFidgetWrapper[Any, NamedTuple]):
         layout = layout_cls()
 
         with self.setup_provided(master_layout, layout):
-            self.inners = []
-            for inner_template in self.inner_templates:
-                inner = inner_template()
-                self.inners.append(inner)
-                inner.on_change.connect(self.change_value)
+            for inner in self.make_inners():
                 layout.addWidget(inner)
 
-        if not self.inners:
-            raise ValueError('at least one inner fidget must be provided')
-        self.setFocusProxy(
-            next(iter(self.inners))
-        )
         self.value_type = namedtuple(to_identifier(self.title), (to_identifier(i.title) for i in self.inners),
                                      rename=True)
 
@@ -78,28 +91,13 @@ class FidgetTuple(MultiFidgetWrapper[Any, NamedTuple]):
         return master_layout
 
     def parse(self):
-        d = []
-        for subwidget in self.inners:
-            try:
-                value = subwidget.parse()
-            except ParseError as e:
-                raise ParseError('error parsing ' + subwidget.title, offender=subwidget) from e
-            d.append(value)
-        return self.value_type._make(d)
+        seq = super().parse()
+        return self.value_type._make(seq)
 
-    def validate(self, d: Tuple):
-        super().validate(d)
-        for i, v in enumerate(d):
-            subwidget = self.inners[i]
-            try:
-                subwidget.validate(v)
-            except ValidationError as e:
-                raise ValidationError('error validating ' + subwidget.title, offender=subwidget) from e
-
-    @inner_plaintext_parser
-    @json_parser(list)
-    def from_json(self, d: list, exact_len=True):
-        if exact_len and len(d) != len(self.inners):
+    def _from_json(self, d: list, exact=True):
+        if not isinstance(d, list):
+            raise PlaintextParseError from TypeError('expected list, got '+type(d).__name__)
+        if exact and len(d) != len(self.inners):
             raise PlaintextParseError(f'value number mismatch (expected {len(self.inners)}, got {len(d)})')
 
         ret = []
@@ -117,14 +115,9 @@ class FidgetTuple(MultiFidgetWrapper[Any, NamedTuple]):
 
         return tuple(ret)
 
-    @explicit
-    @inner_plaintext_parser
-    def from_json_inexact(self, v: str):
-        return self.from_json(v, exact_len=False)
-
-    @inner_plaintext_printer
-    @json_printer
-    def to_json(self, d: Tuple):
+    def _to_json(self, d: Tuple):
+        if not isinstance(d, tuple):
+            raise PlaintextPrintError('can only print tuples')
         ret = []
         for i, subwidget in enumerate(self.inners):
             v = d[i]
@@ -135,13 +128,3 @@ class FidgetTuple(MultiFidgetWrapper[Any, NamedTuple]):
             ret.append(s)
 
         return ret
-
-    def _fill(self, d: Tuple):
-        for sw, v in zip(self.inners, d):
-            sw.fill(v)
-
-    @property
-    def fill(self):
-        if not all(sw.fill for sw in self.inners):
-            return None
-        return self._fill

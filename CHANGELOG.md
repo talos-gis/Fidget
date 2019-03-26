@@ -2,9 +2,20 @@
 ## 0.0.6- unreleased
 ## Added
 * tabs can now handle arrow keys to switch tabs
+## Fixed
+* `FidgetConfirm` without a cancel value would return garbage if closed
 ## Changed
 * Major Code refactoring in `widgets`, including:
-    * Common superclass to `FidgetDict` and `FidgetTabs`
+    * Common superclass to `FidgetDict`, `FidgetTabs`, and `FidgetTuple`
+    * Split `FidgetLabel` to two classes: `FidgetConst` for immutable values, and `FidgetLabel` for mutable
+    * common superclass to `FidgetCheckBox, FidgetComboBox`, `FidgetRadio`, `FidgetDiscreteSpinner`, and `FidgetConst`
+    * common superclass to `FidgetLine`, `FidgetPlainText`, `FidgetEditCombo`, and `FidgetLabel`
+    * common superclass to `FidgetMatrix`, `FidgetTable`
+* If a `FidgetConfirm` does not have a cancel value, its close button will be disabled.
+* `FidgetFilePath`'s glob parser was changed to explicit
+## Removed
+* got rid of `FidgetImagePath`, it will be reintroduced as a more generic preview wrapper.
+
 ## 0.0.5- 2019-03-21
 ## Added
 * FidgetSpin has initial value parameter

@@ -34,6 +34,7 @@ class FidgetDict(FidgetMapping):
     LAYOUT_CLS = QVBoxLayout
     FRAME_STYLE = None
     SCROLLABLE = True
+    INNER_TEMPLATES: Iterable[NamedTemplate] = None
 
     def init_ui(self, frame_style=None, layout_cls=None, scrollable=None):
         super().init_ui()

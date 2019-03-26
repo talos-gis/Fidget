@@ -64,7 +64,7 @@ def is_trivial_printer(p):
     return p in _trivial_printers
 
 
-def only_valid(_invalid=None, _self=None, **kwargs: Optional[T]) -> T:
+def only_valid(_self, _invalid=None, **kwargs: Optional[T]) -> T:
     """
     check that only one of the arguments is not None, and return its value
     :return: the value of the only not-None argument
@@ -89,7 +89,7 @@ def only_valid(_invalid=None, _self=None, **kwargs: Optional[T]) -> T:
     return valid[1]
 
 
-def optional_valid(_invalid=None, _self=None, **kwargs: Optional[T]) -> Optional[T]:
+def optional_valid(_self, _invalid=None, **kwargs: Optional[T]) -> Optional[T]:
     """
     check at most one of the arguments is not None, and return its value
     :return: the value of the only not-None argument, or None

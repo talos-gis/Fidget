@@ -8,7 +8,7 @@ if __name__ == '__main__':
     w = FidgetStacked('number', [
         FidgetInt('raw text'),
         FidgetCheckBox('sign', (0, 1)),
-        FidgetCombo('named', [('dozen', 12), ('one', 1), ('seven', 7)])
+        FidgetCombo('named', options=[('dozen', 12), ('one', 1), ('seven', 7)])
     ], make_plaintext=True, frame_style=QFrame.Box)
     w.show()
     res = app.exec_()

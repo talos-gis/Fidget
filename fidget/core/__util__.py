@@ -72,7 +72,7 @@ def exc_wrap(to_raise: Type[Exception]):
     return ret
 
 
-def first_valid(_invalid=None, _self=None, **kwargs: Optional[T]) -> T:
+def first_valid(_self, _invalid=None, **kwargs: Optional[T]) -> T:
     try:
         return next(a for a in kwargs.values() if a is not _invalid)
     except StopIteration as e:
@@ -95,6 +95,7 @@ def link_to(text: str, url: str):
     ret.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
     ret.setOpenExternalLinks(True)
     return ret
+
 
 @lru_cache(None)
 def mask(func, **kwargs):

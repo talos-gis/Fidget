@@ -22,7 +22,8 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
 
     def __init__(self, inner_template: TemplateLike[T] = None, outer_template: TemplateLike[T] = None, layout_cls=None,
                  initial_value: T = NOT_INITIAL, **kwargs):
-        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE, _self=self).template_of()
+        inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE,
+                                    _self=self).template_of()
 
         super().__init__(inner_template.title, **kwargs)
 
@@ -39,8 +40,8 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
 
         self.init_ui(layout_cls=layout_cls)
 
-        initial_value = optional_valid(initial_value=initial_value, INITIAL_VALUE=self.INITIAL_VALUE,
-                                       _invalid=self.NOT_INITIAL, _self=self)
+        initial_value = first_valid(initial_value=initial_value, INITIAL_VALUE=self.INITIAL_VALUE,
+                                    _invalid=self.NOT_INITIAL, _self=self)
 
         self.fill_value(initial_value)
 
@@ -59,7 +60,8 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
             self.browse_btn.clicked.connect(self._browse_btn_clicked)
             layout.addWidget(self.browse_btn)
 
-        self.question = FidgetQuestion(self.inner_template, parent=self, cancel_value=self.NOT_INITIAL)
+            self.question = FidgetQuestion(self.inner_template, parent=self, cancel_value=self.NOT_INITIAL)
+
         self.outer.add_plaintext_delegates(self.question)
 
         return layout
@@ -75,10 +77,7 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
         self.fill_value(value)
 
     def fill(self, value: T):
-        if value is self.NOT_INITIAL:
-            self.outer.fill_value()
-        else:
-            self.outer.fill_value(value)
+        self.outer.fill_value(value)
 
     def parse(self):
         return self.outer.parse()

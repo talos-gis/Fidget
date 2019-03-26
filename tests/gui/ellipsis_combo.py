@@ -13,4 +13,3 @@ class AskInt(FidgetConfirmer):
             'b',
             'c'
         ]
-        MAKE_PLAINTEXT = True

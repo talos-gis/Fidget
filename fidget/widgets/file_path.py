@@ -5,27 +5,10 @@ from glob import iglob
 
 from fidget.backend.QtWidgets import QHBoxLayout, QLineEdit, QFileDialog, QPushButton
 
-from fidget.core import Fidget, ValidationError, PlaintextParseError
+from fidget.core import Fidget, ValidationError, PlaintextParseError, inner_plaintext_parser, explicit
 from fidget.core.__util__ import first_valid
 
 from fidget.widgets.__util__ import filename_valid
-
-
-def glob_search(pattern):
-    i = iglob(pattern)
-    try:
-        ret = next(i)
-    except StopIteration as e:
-        raise PlaintextParseError('no paths match pattern') from e
-
-    try:
-        next(i)
-    except StopIteration:
-        pass
-    else:
-        raise PlaintextParseError('multiple paths match pattern')
-
-    return Path(ret)
 
 
 FileDialogArgs = Union[Callable[..., QFileDialog], Dict[str, Any], QFileDialog]
@@ -100,7 +83,7 @@ class FidgetFilePath(Fidget[Path]):
 
     def browse(self, *a):
         if self.dialog.exec():
-            self.fill(self.dialog.selectedFiles()[0])
+            self.fill_value(self.dialog.selectedFiles()[0])
 
     def parse(self):
         return Path(self.edit.text())
@@ -132,10 +115,28 @@ class FidgetFilePath(Fidget[Path]):
     def fill(self, v: Path):
         self.edit.setText(str(v))
 
+    @inner_plaintext_parser
+    @explicit
+    @staticmethod
+    def glob_search(pattern):
+        i = iglob(pattern)
+        try:
+            ret = next(i)
+        except StopIteration as e:
+            raise PlaintextParseError('no paths match pattern') from e
+
+        try:
+            next(i)
+        except StopIteration:
+            pass
+        else:
+            raise PlaintextParseError('multiple paths match pattern')
+
+        return Path(ret)
+
     @classmethod
     def cls_plaintext_parsers(cls):
         yield Path
-        yield glob_search
         yield from super().cls_plaintext_parsers()
 
     @classmethod

@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-from typing import Generic, TypeVar, Union, Optional
-
-from dataclasses import dataclass
-from enum import IntEnum
 from abc import ABC, abstractmethod
+from typing import Generic, TypeVar
 
 from fidget.backend.QtWidgets import QWidget
-
 from fidget.core.__util__ import error_details, shorten
 
 T = TypeVar('T')
@@ -78,6 +74,9 @@ class GoodValue(Generic[T], FidgetValue):
 
     def is_ok(self):
         return True
+
+    def __str__(self):
+        return f'{type(self).__name__}[{type(self.value).__qualname__}]: {self.details}'
 
 
 ET = TypeVar('ET', bound=Exception)

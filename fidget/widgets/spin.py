@@ -1,13 +1,12 @@
-from typing import Union, TypeVar, Generic, Iterable, Tuple, List, Dict
+from typing import Union, TypeVar, Generic, Iterable, Tuple
 
-from fidget.backend.QtWidgets import QSpinBox, QDoubleSpinBox, QHBoxLayout
 from fidget.backend.QtGui import QValidator
-
-from fidget.core import Fidget, PlaintextPrintError, inner_plaintext_parser, PlaintextParseError
+from fidget.backend.QtWidgets import QSpinBox, QDoubleSpinBox, QHBoxLayout
+from fidget.core import Fidget
 from fidget.core.__util__ import first_valid
-
+from fidget.widgets.__util__ import optional_valid
+from fidget.widgets.discrete import FidgetDiscreteChoice
 from fidget.widgets.user_util import FidgetFloat, FidgetInt
-from fidget.widgets.__util__ import optional_valid, only_valid, TolerantDict
 
 
 # todo document
@@ -38,7 +37,8 @@ class FidgetSpin(Fidget[float]):
         self.init_ui(minimum=minimum, maximum=maximum, step=step, use_float=self.use_float, prefix=prefix,
                      suffix=suffix, decimals=decimals, initial_value=initial_value)
 
-    def init_ui(self, minimum=None, maximum=None, step=None, use_float=None, prefix=None, suffix=None, decimals=None, initial_value=None):
+    def init_ui(self, minimum=None, maximum=None, step=None, use_float=None, prefix=None, suffix=None, decimals=None,
+                initial_value=None):
         super().init_ui()
 
         layout = QHBoxLayout()
@@ -96,45 +96,24 @@ class FidgetSpin(Fidget[float]):
 T = TypeVar('T')
 
 
-class FidgetDiscreteSpin(Generic[T], Fidget[T]):
+class FidgetDiscreteSpin(Generic[T], FidgetDiscreteChoice[T]):
     MAKE_TITLE = False
     MAKE_INDICATOR = False
     MAKE_PLAINTEXT = False
 
-    def __init__(self, title, *, options: Iterable[Union[T, Tuple[str, T]]] = None, initial_index=None,
-                 initial_value=None, wrap=None,
-                 **kwargs):
+    def __init__(self, title, wrap=None, **kwargs):
         super().__init__(title, **kwargs)
-
-        options = only_valid(options=options, OPTIONS=self.OPTIONS, _self=self)
-        initial_index = optional_valid(initial_index=initial_index, INITIAL_INDEX=self.INITIAL_INDEX, _self=self)
-        initial_value = first_valid(initial_value=initial_value, INITIAL_VALUE=self.INITIAL_VALUE, _self=self)
         wrap = first_valid(wrap=wrap, WRAP=self.WRAP, _self=self)
-
-        self.options: List[Tuple[str, T]] = []
-        self.opt_lookup: TolerantDict[T, int] = TolerantDict()
-        self.names: Dict[str, int] = {}
-
-        index = initial_index
-        for i, option in enumerate(options):
-            names, value = self.extract_names_and_value(option)
-            if value == initial_value:
-                index = i
-            self.options.append((names[0], value))
-            for name in names:
-                self.names.setdefault(name, i)
-            self.opt_lookup[value] = i
 
         self.spin: QSpinBox = None
 
-        self.init_ui(index=index, wrap=wrap)
+        self.init_ui(wrap=wrap)
 
-    OPTIONS: Iterable[Union[T, Tuple[str, T]]] = None
-    WRAP = True
-    INITIAL_INDEX = None
-    INITIAL_VALUE = object()
+        self.fill_initial()
 
-    def init_ui(self, index=None, wrap=None):
+    WRAP = False
+
+    def init_ui(self, wrap=None):
         super().init_ui()
 
         layout = QHBoxLayout()
@@ -166,35 +145,17 @@ class FidgetDiscreteSpin(Generic[T], Fidget[T]):
         return layout
 
     def _validate(self, s: str, pos: int):
-        if s in self.names:
+        if s in self.name_lookup:
             return QValidator.Acceptable
         return QValidator.Intermediate
 
     def _value_from_text(self, t: str):
-        return self.names.get(t, -2)
+        return self.name_lookup.get(t, -2)[0]
 
     def _text_from_value(self, i: int):
         if i == len(self.options):
             i = 0
-        return self.options[i][0]
-
-    def extract_names_and_value(self, value: Union[Tuple[str, T], T]) -> Tuple[List[str], T]:
-        names = []
-
-        if isinstance(value, tuple) and len(value) == 2 and isinstance(value[0], str):
-            names.append(value[0])
-            value = value[1]
-
-        for printer in self.implicit_plaintext_printers():
-            try:
-                names.append(printer(value))
-            except PlaintextPrintError:
-                pass
-
-        if not names:
-            raise Exception(f'no names for {value}')
-
-        return names, value
+        return self.options[i][0][0]
 
     def check_wrap(self, new_val):
         if len(self.options) <= new_val or new_val < 0:
@@ -205,20 +166,5 @@ class FidgetDiscreteSpin(Generic[T], Fidget[T]):
         v = self.spin.value() % len(self.options)
         return self.options[v][1]
 
-    @inner_plaintext_parser
-    def by_name(self, v):
-        try:
-            return self.names[v]
-        except KeyError as e:
-            raise PlaintextParseError from e
-
-    def fill(self, key):
-        try:
-            index, _ = self.opt_lookup[key]
-        except KeyError as e:
-            if isinstance(key, int):
-                index = key
-            else:
-                raise KeyError('fill value is not an option') from e
-
+    def fill_index(self, index):
         self.spin.setValue(index)

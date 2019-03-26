@@ -196,10 +196,10 @@ class FidgetTransparentConverter(Generic[T], FidgetConverter[T, T]):
 if __name__ == '__main__':
     from fidget.backend import QApplication
     from fidget import wrap_parser
-    from fidget.widgets import FidgetLineEdit, FidgetOptional
+    from fidget.widgets import FidgetLine, FidgetOptional
 
     app = QApplication([])
-    w = FidgetConverter(FidgetLineEdit('sample', pattern='(1[^1]*1|[^1])*', make_plaintext=True),
+    w = FidgetConverter(FidgetLine('sample', pattern='(1[^1]*1|[^1])*', make_plaintext=True),
                         converter_func=wrap_parser(ValueError, int),
                         back_converter_func=str, make_indicator=True)
     w = FidgetOptional(w, make_title=True)

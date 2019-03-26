@@ -319,9 +319,9 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         :return: an iterator of plaintext printers for the widget
         """
         yield from self._inner_plaintext_printers()
-        yield from self.cls_plaintext_printers()
         for d in self._plaintext_printer_delegates:
             yield from d()
+        yield from self.cls_plaintext_printers()
 
     @classmethod
     def cls_plaintext_parsers(cls) -> Iterable[PlaintextParser[T]]:
@@ -332,9 +332,9 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         :return: an iterator of plaintext parsers for the widget
         """
         yield from self._inner_plaintext_parsers()
-        yield from self.cls_plaintext_parsers()
         for d in self._plaintext_parser_delegates:
             yield from d()
+        yield from self.cls_plaintext_parsers()
 
     def indication_changed(self, value: Union[GoodValue[T], BadValue]):
         pass
@@ -373,10 +373,30 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         return self._joined_plaintext_printer
 
     def implicit_plaintext_parsers(self):
-        return (yield from (p for p in self.plaintext_parsers() if not getattr(p, '__explicit__', False)))
+        for parser, priority in sort_adapters(self.plaintext_parsers()):
+            if priority < 0:
+                return
+            yield parser
 
     def implicit_plaintext_printers(self):
-        return (yield from (p for p in self.plaintext_printers() if not getattr(p, '__explicit__', False)))
+        for printer, priority in sort_adapters(self.plaintext_printers()):
+            if priority < 0:
+                return
+            yield printer
+
+    @classmethod
+    def implicit_cls_plaintext_parsers(cls):
+        for parser, priority in sort_adapters(cls.cls_plaintext_parsers()):
+            if priority < 0:
+                return
+            yield parser
+
+    @classmethod
+    def implicit_cls_plaintext_printers(cls):
+        for printer, priority in sort_adapters(cls.cls_plaintext_printers()):
+            if priority < 0:
+                return
+            yield printer
 
     def provided_pre(self, exclude=()):
         """

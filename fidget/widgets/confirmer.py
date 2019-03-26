@@ -95,6 +95,8 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
 
         if modality:
             self.setWindowModality(modality)
+        if not self.make_cancel:
+            self.setWindowFlags(Qt.WindowMinimizeButtonHint)
 
         self.add_plaintext_delegates(self.inner)
         return layout
@@ -147,7 +149,7 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
             super().keyPressEvent(event)
 
     def closeEvent(self, event):
-        if event.spontaneous():
+        if self.make_cancel and event.spontaneous():
             self.cancel_flag = True
             self.change_value()
         super().closeEvent(event)

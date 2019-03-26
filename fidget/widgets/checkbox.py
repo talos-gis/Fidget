@@ -1,36 +1,35 @@
-from typing import TypeVar, Generic, Tuple, Union, Mapping
+from typing import TypeVar, Generic
 
 from fidget.backend.QtWidgets import QCheckBox, QHBoxLayout
 
-from fidget.core import Fidget, inner_plaintext_parser, PlaintextPrintError, PlaintextParseError
+from fidget.core.__util__ import first_valid
+
+from fidget.widgets.discrete import FidgetDiscreteChoice
 
 T = TypeVar('T')
 
 
-class FidgetCheckBox(Generic[T], Fidget[T]):
+class FidgetCheckBox(Generic[T], FidgetDiscreteChoice[T]):
     """
     A checkbox that can contain one of two values
     """
     MAKE_INDICATOR = False
     MAKE_TITLE = False
     MAKE_PLAINTEXT = False
-    TITLE_AS_TEXT = True
 
-    def __init__(self, title, value_selector: Union[Tuple[T, T], Mapping[bool, T]] = (False, True),
-                 initial: bool = False, **kwargs):
-        """
-        :param title: the title
-        :param value_selector: a mapping from bool to the desired value
-        :param initial: the initial boolean value
-        :param kwargs: forwarded to Fidget
-        """
+    UPDATE_TEXT = True
+
+    def __init__(self, title, update_text = None, **kwargs):
         super().__init__(title, **kwargs)
+        if len(self.options) != 2:
+            raise ValueError('FidgetCheckBox must have exactly 2 options, got '+str(len(self.options)))
 
-        self.value_selector = value_selector
         self.checkbox: QCheckBox = None
 
+        self.update_text = first_valid(update_text=update_text, UPDATE_TEXT=self.UPDATE_TEXT, _self=self)
+
         self.init_ui()
-        self.checkbox.setChecked(initial)
+        self.fill_initial()
 
     def init_ui(self):
         super().init_ui()
@@ -45,64 +44,14 @@ class FidgetCheckBox(Generic[T], Fidget[T]):
         self.setFocusProxy(self.checkbox)
         return layout
 
-    @property
-    def true_val(self):
-        return self.value_selector[True]
-
-    @property
-    def false_val(self):
-        return self.value_selector[False]
-
     def parse(self):
-        return self.value_selector[self.checkbox.isChecked()]
+        return self.options[self.checkbox.isChecked()][1]
 
-    def fill(self, key: Union[T, bool]):
-        if key == self.true_val:
-            v = True
-        elif key == self.false_val:
-            v = False
-        elif isinstance(key, bool):
-            v = key
-        else:
-            raise ValueError('value is not a valid fill value')
+    def fill_index(self, index):
+        self.checkbox.setChecked(index)
 
-        self.checkbox.setChecked(v)
-
-    @inner_plaintext_parser
-    def from_values(self, text):
-        for printer in self.implicit_plaintext_printers():
-            try:
-                true_text = printer(self.true_val)
-            except PlaintextPrintError:
-                pass
-            else:
-                if true_text == text:
-                    return self.true_val
-
-            try:
-                false_text = printer(self.false_val)
-            except PlaintextPrintError:
-                pass
-            else:
-                if false_text == text:
-                    return self.false_val
-        raise PlaintextParseError('text did not match any printed value')
-
-
-if __name__ == '__main__':
-    from fidget.backend.QtWidgets import QApplication
-    from enum import Enum, auto
-
-
-    class Options(Enum):
-        first = auto()
-        second = auto()
-        third = auto()
-
-
-    app = QApplication([])
-    w = FidgetCheckBox('sample', ('NO', 'YES'))
-    w.show()
-    res = app.exec_()
-    print(w.value())
-    exit(res)
+    def change_value(self, *args):
+        super().change_value(*args)
+        if self.update_text:
+            option_name = self.options[self.checkbox.isChecked()][0]
+            self.checkbox.setText(option_name[0])

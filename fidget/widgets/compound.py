@@ -39,8 +39,9 @@ class FidgetCompound(Generic[T], MultiFidgetWrapper[Any, T]):
     def inner_templates_values(cls, inner_templates):
         pass
 
+    @classmethod
     @abstractmethod
-    def _make_inners(self, inner_templates):
+    def _make_inners(cls, inner_templates):
         pass
 
     @classmethod
@@ -79,7 +80,7 @@ class FidgetCompound(Generic[T], MultiFidgetWrapper[Any, T]):
             inner.on_change.connect(self.change_value)
 
         self.setFocusProxy(
-            next(iter(self.inners.values()))
+            next(iter(self.inners_values(self.inners)))
         )
 
         return self.inners
