@@ -10,11 +10,12 @@ from fidget.core.__util__ import first_valid
 
 from fidget.widgets.__util__ import filename_valid, RememberingFileDialog
 
-
 FileDialogArgs = Union[Callable[..., QFileDialog], Dict[str, Any], QFileDialog]
 
 
-class FidgetFilePath(Fidget[Path]):
+# todo superclass with filepath
+
+class FidgetDirPath(Fidget[Path]):
     """
     A Fidget to store a Path to a file
     """
@@ -37,7 +38,7 @@ class FidgetFilePath(Fidget[Path]):
 
         self.init_ui(dialog)
 
-    DEFAULT_DIALOG_CLS : Type[QFileDialog] = RememberingFileDialog
+    DEFAULT_DIALOG_CLS: Type[QFileDialog] = RememberingFileDialog
     DIALOG: FileDialogArgs = RememberingFileDialog
     EXIST_COND = None
 
@@ -45,10 +46,7 @@ class FidgetFilePath(Fidget[Path]):
         super().init_ui()
         self.dialog = self._args_to_filedialog(first_valid(dialog=dialog, DIALOG=self.DIALOG, _self=self))
 
-        if self.exist_cond:
-            self.dialog.setFileMode(QFileDialog.ExistingFile)
-        else:
-            self.dialog.setFileMode(QFileDialog.AnyFile)
+        self.dialog.setFileMode(QFileDialog.DirectoryOnly)
 
         layout = QHBoxLayout(self)
 
@@ -93,8 +91,8 @@ class FidgetFilePath(Fidget[Path]):
                 raise ValidationError('path seems invalid', offender=self.edit)
 
         if exists \
-                and value.is_dir():
-            raise ValidationError('path is a directory', offender=self.edit)
+                and not value.is_dir():
+            raise ValidationError('path not is a directory', offender=self.edit)
 
     def fill(self, v: Path):
         self.edit.setText(str(v))

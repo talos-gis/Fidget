@@ -290,7 +290,7 @@ class FidgetTable(Generic[T], MultiFidgetWrapper[object, List[NamedTuple]]):
             row = []
             for field_name, inner in zip(self.value_type._fields, inner_row):
                 try:
-                    row.append(inner.parse())
+                    row.append(inner.maybe_parse())
                 except ParseError as e:
                     raise ParseError(f'error parsing {i}[{field_name}]', offender=inner) from e
             ret.append(self.value_type._make(row))
@@ -300,7 +300,7 @@ class FidgetTable(Generic[T], MultiFidgetWrapper[object, List[NamedTuple]]):
         for i, (inner_row, v_row) in enumerate(zip(self.inners, value)):
             for field_name, (inner, v) in zip(self.value_type._fields, zip(inner_row, v_row)):
                 try:
-                    inner.validate(v)
+                    inner.maybe_validate(v)
                 except ValidationError as e:
                     raise ValidationError(f'error validating {i}[{field_name}]', offender=inner) from e
 

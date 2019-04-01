@@ -2,10 +2,9 @@ from typing import TypeVar, Generic
 
 from fidget.backend.QtWidgets import QLabel, QHBoxLayout
 
-from fidget.core.__util__ import first_valid
+from fidget.core.__util__ import first_valid, optional_valid
 
 from fidget.widgets.discrete import FidgetDiscreteChoice
-from fidget.widgets.__util__ import optional_valid
 
 T = TypeVar('T')
 

@@ -111,13 +111,13 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
         return self.inner.provided_post(*args, **kwargs)
 
     def parse(self):
-        f = self.inner.parse()
+        f = self.inner.maybe_parse()
         return self.convert(f)
 
     def validate(self, value: T):
         if self.back_convert:
             bc = self.back_convert(value)
-            self.inner.validate(bc)
+            self.inner.maybe_validate(bc)
         super().validate(value)
 
     def convert(self, v: F) -> T:

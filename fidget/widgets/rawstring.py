@@ -3,8 +3,7 @@ from typing import Optional, Pattern, Union, Container
 import re
 
 from fidget.core import Fidget, ValidationError, inner_plaintext_parser
-from fidget.core.__util__ import first_valid
-from fidget.widgets.__util__ import optional_valid
+from fidget.core.__util__ import first_valid, optional_valid
 
 
 class FidgetRawString(Fidget[str]):

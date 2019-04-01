@@ -78,7 +78,7 @@ class FidgetDict(FidgetMapping):
         d = {}
         for key, subwidget in self.inners.items():
             try:
-                value = subwidget.parse()
+                value = subwidget.maybe_parse()
             except ParseError as e:
                 raise ParseError('error parsing ' + subwidget.title, offender=subwidget) from e
             d[key] = value
@@ -89,6 +89,6 @@ class FidgetDict(FidgetMapping):
         for k, v in d.items():
             subwidget = self.inners[k]
             try:
-                subwidget.validate(v)
+                subwidget.maybe_validate(v)
             except ValidationError as e:
                 raise ValidationError('error validating ' + subwidget.title, offender=subwidget) from e

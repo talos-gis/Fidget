@@ -5,9 +5,8 @@ from typing import TypeVar, Optional, Tuple, Iterable, List, Callable, MutableMa
 
 from pathlib import Path
 import os
-from functools import wraps, lru_cache
 
-from fidget.backend.QtWidgets import QWidget
+from fidget.backend.QtWidgets import QWidget, QFileDialog
 
 from fidget.core import Fidget, ValidationError
 
@@ -89,27 +88,6 @@ def only_valid(_self, _invalid=None, **kwargs: Optional[T]) -> T:
     return valid[1]
 
 
-def optional_valid(_self, _invalid=None, **kwargs: Optional[T]) -> Optional[T]:
-    """
-    check at most one of the arguments is not None, and return its value
-    :return: the value of the only not-None argument, or None
-    """
-    valid = _invalid
-    for k, v in kwargs.items():
-        if v is _invalid:
-            continue
-        if valid is not _invalid:
-            if _self:
-                self_str = f' in {_self}'
-            else:
-                self_str = ''
-            raise TypeError(f'both {valid[0]} and {k} provided{self_str}')
-        valid = k, v
-    if valid is _invalid:
-        return _invalid
-    return valid[1]
-
-
 def last_focus_proxy(seed: QWidget):
     """
     This utility function is because SetTabOrder currently has a bug where it doesn't respect focus proxies, so we
@@ -121,7 +99,6 @@ def last_focus_proxy(seed: QWidget):
         if not focus:
             return ret
         ret = focus
-
 
 
 def repeat_last(iterable):
@@ -340,3 +317,20 @@ def to_identifier(s: str):
         return s
 
     return '_'
+
+
+class RememberingFileDialog(QFileDialog):
+    """
+    A QFileDialog that remembers its last directory
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.last_dir = None
+
+    def exec(self):
+        if self.last_dir:
+            self.setDirectory(self.last_dir)
+        ret = super().exec_()
+        self.last_dir = super().directory()
+        return ret

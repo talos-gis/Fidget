@@ -18,7 +18,7 @@ from fidget.core.plaintext_adapter import PlaintextParseError, PlaintextPrintErr
     sort_adapters
 from fidget.core.fidget_value import FidgetValue, BadValue, GoodValue, ParseError, ValidationError
 from fidget.core.primitive_questions import FontQuestion
-from fidget.core.__util__ import error_details, first_valid, error_attrs
+from fidget.core.__util__ import error_details, first_valid, error_attrs, optional_valid
 
 T = TypeVar('T')
 
@@ -236,7 +236,7 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         self._plaintext_widget: Optional[PlaintextEditWidget[T]] = None
 
         self.validation_func = validation_func
-        self.auto_func = auto_func
+        self.auto_func = optional_valid(auto_func=auto_func, AUTO_FUNC=self.AUTO_FUNC, _self=self)
 
         self._suppress_update = False
 
@@ -286,6 +286,7 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
     # implement this method to allow the widget to be filled from outer elements (like plaintext or auto)
     # note that this function shouldn't be called form outside!, only call fill_value
     fill: Optional[Callable[[Fidget[T], T], None]] = None
+    AUTO_FUNC: Optional[Callable[[Fidget[T]], T]] = None
 
     @abstractmethod
     def parse(self) -> T:
@@ -441,6 +442,15 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
     # endregion
 
     # region call_me_from_outside
+    def maybe_parse(self):
+        if self._value is None or not self._value.is_ok():
+            return self.parse()
+        return self._value.value
+
+    def maybe_validate(self, v):
+        if self._value is None:
+            self.validate(v)
+
     def fill_from_text(self, s: str):
         """
         fill the UI from a string, by parsing it

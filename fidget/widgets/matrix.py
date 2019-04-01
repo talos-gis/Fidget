@@ -412,7 +412,7 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
             row = []
             for j, inner in enumerate(inner_row):
                 try:
-                    row.append(inner.parse())
+                    row.append(inner.maybe_parse())
                 except ParseError as e:
                     raise ParseError(f'error parsing {i, j}', offender=inner) from e
             ret.append(row)
@@ -422,7 +422,7 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
         for i, (inner_row, v_row) in enumerate(zip(self.inners, value)):
             for j, (inner, v) in enumerate(zip(inner_row, v_row)):
                 try:
-                    inner.validate(v)
+                    inner.maybe_validate(v)
                 except ValidationError as e:
                     raise ValidationError(f'error validating {i, j}', offender=inner) from e
 
