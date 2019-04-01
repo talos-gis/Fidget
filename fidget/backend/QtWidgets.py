@@ -12,6 +12,7 @@ _QtWidgets = __backend__.partial('QtWidgets')
 
 QtWidgets = __backend__.module('QtWidgets')
 
+QAction: Type[PyQt5.QtWidgets.QAction] = _QtWidgets['QAction']
 QApplication: Type[PyQt5.QtWidgets.QApplication] = _QtWidgets['QApplication']
 QBoxLayout: Type[PyQt5.QtWidgets.QBoxLayout] = _QtWidgets['QBoxLayout']
 QCheckBox: Type[PyQt5.QtWidgets.QCheckBox] = _QtWidgets['QCheckBox']
@@ -38,6 +39,9 @@ QSpinBox: Type[PyQt5.QtWidgets.QSpinBox] = _QtWidgets['QSpinBox']
 QStackedWidget: Type[PyQt5.QtWidgets.QStackedWidget] = _QtWidgets['QStackedWidget']
 QStyle: Type[PyQt5.QtWidgets.QStyle] = _QtWidgets['QStyle']
 QTabWidget: Type[PyQt5.QtWidgets.QTabWidget] = _QtWidgets['QTabWidget']
+QToolButton: Type[PyQt5.QtWidgets.QToolButton] = _QtWidgets['QToolButton']
+QTreeWidget: Type[PyQt5.QtWidgets.QTreeWidget] = _QtWidgets['QTreeWidget']
+QTreeWidgetItem: Type[PyQt5.QtWidgets.QTreeWidgetItem] = _QtWidgets['QTreeWidgetItem']
 QVBoxLayout: Type[PyQt5.QtWidgets.QVBoxLayout] = _QtWidgets['QVBoxLayout']
 QWidget: Type[PyQt5.QtWidgets.QWidget] = _QtWidgets['QWidget']
 
