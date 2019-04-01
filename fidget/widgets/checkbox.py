@@ -18,6 +18,7 @@ class FidgetCheckBox(Generic[T], FidgetDiscreteChoice[T]):
     MAKE_PLAINTEXT = False
 
     UPDATE_TEXT = True
+    OPTIONS = (False, True)
 
     def __init__(self, title, update_text = None, **kwargs):
         super().__init__(title, **kwargs)

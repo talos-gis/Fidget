@@ -16,6 +16,7 @@ class FidgetEditCombo(FidgetRawString):
     A Fidget for an editable ComboBox
     """
     NO_DEFAULT_VALUE = object()
+    OPTIONS = None
 
     def __init__(self, title, options: Iterable[Union[Tuple[str, T], T]] = None,
                  **kwargs):
