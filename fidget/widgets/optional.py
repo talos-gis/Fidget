@@ -67,7 +67,7 @@ class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
 
         inner_template = only_valid(inner_template=inner_template, INNER_TEMPLATE=self.INNER_TEMPLATE, _self=self).template_of()
 
-        inner_template.extract_default(sink=kwargs, upper_space=self)
+        inner_template.extract_default(sink=kwargs, upper_space=type(self))
 
         super().__init__(inner_template.title, **kwargs)
 

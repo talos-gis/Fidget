@@ -19,7 +19,7 @@ class FidgetCompound(Generic[T], MultiFidgetWrapper[Any, T]):
             only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES, _self=self)
         )
 
-        FidgetTemplate.extract_default(*self.inner_templates_values(inner_templates), sink=kwargs, upper_space=self)
+        FidgetTemplate.extract_default(*self.inner_templates_values(inner_templates), sink=kwargs, upper_space=type(self))
 
         super().__init__(title, **kwargs)
 

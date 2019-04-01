@@ -83,8 +83,6 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
             self.inner.plaintext_button.clicked.disconnect(self.inner._plaintext_btn_click)
             self.inner.plaintext_button.clicked.connect(self._plaintext_btn_click)
 
-            self.keep.append(self._plaintext_widget)
-
             self._plaintext_widget = self.inner._plaintext_widget
             self._plaintext_widget.owner = self
 
@@ -94,7 +92,7 @@ class FidgetConverter(Generic[F, T], SingleFidgetWrapper[F, T]):
             self.inner.indicator_label.linkActivated.disconnect(self.inner._detail_button_clicked)
             self.inner.indicator_label.linkActivated.connect(self._detail_button_clicked)
 
-            self.keep.append(self.indicator_label)
+            #self.keep.append(self.indicator_label)
 
             self.indicator_label = self.inner.indicator_label
             self.make_indicator = True
