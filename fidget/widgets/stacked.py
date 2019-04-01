@@ -187,7 +187,7 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
             only_valid(inner_templates=inner_templates, INNER_TEMPLATES=self.INNER_TEMPLATES, _self=self)
         )
 
-        FidgetTemplate.extract_default(*self.inner_templates.values(), sink=kwargs, upper_space=self, union=True)
+        FidgetTemplate.extract_default(*self.inner_templates.values(), sink=kwargs, upper_space=type(self), union=True)
 
         super().__init__(title, **kwargs)
 
