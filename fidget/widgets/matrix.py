@@ -229,6 +229,15 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
             self.del_row(row_index)
             self.apply_matrix()
 
+        # todo check if inner has fill
+        def clone():
+            self.add_row(row_index+1)
+            for c in range(self.column_count):
+                v = self.inners[row_index][c].value()
+                if v.is_ok() and self.inners[row_index+1][c].fill is not None:
+                    self.inners[row_index+1][c].fill_value(v.value)
+            self.apply_matrix()
+
         ret.add_top_action = menu.addAction(add_row_above_icon(), 'add row above', add_top)
         ret.add_top_action.setEnabled(False)
 
@@ -244,6 +253,9 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
 
         ret.del_action = menu.addAction(del_row_icon(), 'delete row', del_)
         ret.del_action.setEnabled(False)
+
+        ret.clone_action = menu.addAction('clone', clone)
+        ret.clone_action.setEnabled(False)
 
         @ret.clicked.connect
         def _(a):
@@ -304,6 +316,15 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
             self.del_col(col_index)
             self.apply_matrix()
 
+        # todo check if inner has fill
+        def clone():
+            self.add_row(col_index + 1)
+            for r in range(self.row_count):
+                v = self.inners[r][col_index].value()
+                if v.is_ok() and self.inners[r][col_index+1].fill is not None:
+                    self.inners[r][col_index+1].fill_value(v.value)
+            self.apply_matrix()
+
         ret.add_left_action = menu.addAction(add_col_left_icon(), 'add column left',
                                              add_left)
         ret.add_left_action.setEnabled(False)
@@ -320,6 +341,9 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
 
         ret.del_action = menu.addAction(del_col_icon(), 'delete column', del_)
         ret.del_action.setEnabled(False)
+
+        ret.clone_action = menu.addAction('clone', clone)
+        ret.clone_action.setEnabled(False)
 
         @ret.clicked.connect
         def _(a):
@@ -392,6 +416,7 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
             btn.add_bottom_action.setEnabled(can_add_row)
             btn.add_many_bottom_action.setEnabled(can_add_row)
             btn.del_action.setEnabled(can_del_row)
+            btn.clone_action.setEnabled(can_add_row)
 
         can_add_col = self.column_bounds.in_bounds(self.column_count + 1)
         can_del_col = self.column_bounds.in_bounds(self.column_count - 1)
@@ -401,6 +426,7 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
             btn.add_right_action.setEnabled(can_add_col)
             btn.add_many_right_action.setEnabled(can_add_col)
             btn.del_action.setEnabled(can_del_col)
+            btn.clone_action.setEnabled(can_add_col)
 
         self.change_value()
 
