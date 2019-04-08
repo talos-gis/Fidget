@@ -286,8 +286,8 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
     def fill(self, v: Union[T, targeted_fill]):
         if isinstance(v, self.targeted_fill):
             name = v.option_name
+            self.selector.fill_value(name)
             v = v.value
-            self.selector.fill(name)
         self.current_subwidget().fill(v)
 
     @staticmethod

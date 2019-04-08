@@ -4,6 +4,8 @@ from itertools import chain
 from io import StringIO
 import csv
 
+from fidget.core.plaintext_adapter import high_priority
+
 from fidget.backend.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QMenu, QStyle, QApplication, QVBoxLayout, \
     QScrollArea, QWidget
 from fidget.backend.QtCore import Qt
@@ -501,6 +503,7 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
     to_csv.__name__ = 'csv'
 
     @inner_plaintext_printer
+    @high_priority
     @json_printer
     def to_json(self, v):
         return self.string_matrix(v)

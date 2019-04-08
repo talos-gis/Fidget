@@ -5,6 +5,8 @@ from io import StringIO
 import csv
 from collections import namedtuple
 
+from fidget.core.plaintext_adapter import high_priority
+
 from fidget.backend.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QMenu, QApplication, QVBoxLayout, \
     QScrollArea, QWidget, QLabel
 from fidget.backend.QtCore import Qt
@@ -366,6 +368,7 @@ class FidgetTable(Generic[T], MultiFidgetWrapper[object, List[NamedTuple]]):
     to_csv.__name__ = 'csv'
 
     @inner_plaintext_printer
+    @high_priority
     @json_printer
     def to_json(self, v):
         return self.string_matrix(v)

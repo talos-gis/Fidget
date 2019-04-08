@@ -60,7 +60,7 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
             self.browse_btn.clicked.connect(self._browse_btn_clicked)
             layout.addWidget(self.browse_btn)
 
-            self.question = FidgetQuestion(self.inner_template, parent=self, cancel_value=self.NOT_INITIAL)
+            self.question = FidgetQuestion(self.inner_template, parent=self)
 
         self.outer.add_plaintext_delegates(self.question)
 
@@ -71,8 +71,6 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
         if not v.is_ok():
             return
         value = v.value
-        if value is self.NOT_INITIAL:
-            return
 
         self.fill_value(value)
 

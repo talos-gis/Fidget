@@ -4,6 +4,8 @@ from typing import Iterable, Generic, TypeVar, Collection, Any
 
 from abc import abstractmethod
 
+from fidget.core.plaintext_adapter import high_priority
+
 from fidget.core import ParseError, ValidationError, inner_plaintext_parser, inner_plaintext_printer, \
     FidgetTemplate, explicit, json_parser, TemplateLike, json_printer
 
@@ -123,6 +125,7 @@ class FidgetCompound(Generic[T], MultiFidgetWrapper[Any, T]):
         return self._from_json(v, exact=False)
 
     @inner_plaintext_printer
+    @high_priority
     @json_printer
     def to_json(self, d):
         return self._to_json(d)

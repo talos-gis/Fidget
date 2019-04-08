@@ -86,8 +86,12 @@ class FidgetMapping(FidgetCompound[Mapping]):
         return ret
 
     def _to_json(self, d: Mapping[str, object]):
+        if not isinstance(d, Mapping):
+            raise PlaintextPrintError from TypeError('can only accept dict')
         ret = {}
         for k, subwidget in self.inners.items():
+            if k not in d:
+                raise PlaintextPrintError('f{k} missing')
             v = d[k]
             try:
                 s = subwidget.joined_plaintext_printer(v)

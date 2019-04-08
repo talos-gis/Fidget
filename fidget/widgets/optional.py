@@ -5,6 +5,8 @@ from typing import TypeVar, Generic, Union
 from itertools import chain
 from functools import wraps, partial
 
+from fidget.core.plaintext_adapter import high_priority
+
 from fidget.backend.QtWidgets import QCheckBox, QHBoxLayout, QWidget, QApplication
 from fidget.backend.QtCore import QObject, QEvent, __backend__
 
@@ -80,9 +82,10 @@ class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
         self.none_value = none_value
         none_names = self.singleton_names.get(self.none_value)
         if none_names:
+            @high_priority
             def NoneParser(s: str):
                 if s.lower() in none_names:
-                    return None
+                    return self.none_value
                 raise PlaintextParseError(f'this parser only accepts {next(iter(none_names))}')
             self.none_parser = NoneParser
         else:
