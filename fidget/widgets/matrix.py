@@ -7,7 +7,7 @@ import csv
 from fidget.core.plaintext_adapter import high_priority
 
 from fidget.backend.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QMenu, QStyle, QApplication, QVBoxLayout, \
-    QScrollArea, QWidget
+    QScrollArea, QWidget, QSizePolicy
 from fidget.backend.QtCore import Qt
 from fidget.backend.QtGui import QCursor
 from fidget.backend.Resources import add_row_above_icon, add_row_below_icon, add_col_left_icon, add_col_right_icon,\
@@ -176,6 +176,7 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
 
     def row_btn(self, row_index):
         ret = QPushButton(self.row_button_text_func(row_index))
+        ret.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
         ret.setFocusPolicy(Qt.ClickFocus)
         menu = QMenu(ret)
 
@@ -252,6 +253,7 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
 
     def col_btn(self, col_index):
         ret = QPushButton(self.column_button_text_func(col_index))
+        ret.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
         ret.setFocusPolicy(Qt.ClickFocus)
         menu = QMenu(ret)
 
@@ -434,7 +436,7 @@ class FidgetMatrix(Generic[T], SingleFidgetWrapper[T, List[List[T]]]):
     def fill(self, v):
         rows = len(v)
         cols = len(v[0])
-        same_dims = True
+        same_dims = 0
 
         if rows < self.row_count:
             for _ in range(self.row_count - rows):

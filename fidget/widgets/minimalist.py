@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TypeVar, Generic
 
-from fidget.backend.QtWidgets import QHBoxLayout, QPushButton, QBoxLayout
+from fidget.backend.QtWidgets import QHBoxLayout, QPushButton, QBoxLayout, QSizePolicy
 
 from fidget.core import FidgetTemplate, TemplateLike, Fidget
-from fidget.core.__util__ import first_valid, optional_valid
+from fidget.core.__util__ import first_valid
 
 from fidget.widgets.__util__ import only_valid
 from fidget.widgets.label import FidgetLabel
@@ -52,13 +52,14 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
 
         layout: QBoxLayout = layout_cls(self)
         with self.setup_provided(layout):
+            self.browse_btn = QPushButton('...')
+            self.browse_btn.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+            self.browse_btn.clicked.connect(self._browse_btn_clicked)
+            layout.addWidget(self.browse_btn)
+
             self.outer = self.outer_template()
             self.outer.on_change.connect(self.change_value)
             layout.addWidget(self.outer)
-
-            self.browse_btn = QPushButton('...')
-            self.browse_btn.clicked.connect(self._browse_btn_clicked)
-            layout.addWidget(self.browse_btn)
 
             self.question = FidgetQuestion(self.inner_template, parent=self)
 
@@ -67,6 +68,9 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
         return layout
 
     def _browse_btn_clicked(self, event):
+        v = self.value()
+        if v.is_ok():
+            self.question.fill_value(v.value)
         v = self.question.exec_()
         if not v.is_ok():
             return

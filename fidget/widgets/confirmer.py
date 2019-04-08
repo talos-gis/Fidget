@@ -162,6 +162,9 @@ class FidgetConfirmer(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
             return str(v)
         raise PlaintextPrintError('cannot print non-cancel value')
 
+    def fill(self, v):
+        self.inner.fill(v)
+
 
 class FidgetQuestion(Generic[T, C], FidgetConfirmer[T, C]):
     """

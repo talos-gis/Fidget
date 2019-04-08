@@ -265,20 +265,24 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         if self.make_indicator:
             self.indicator_label = QLabel('')
             self.indicator_label.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
+            self.indicator_label.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
             self.indicator_label.linkActivated.connect(self._detail_button_clicked)
 
         if self.make_auto:
             self.auto_button = QPushButton('auto')
+            self.auto_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
             self.auto_button.clicked.connect(self._auto_btn_click)
 
         if self.make_plaintext:
             self.plaintext_button = QPushButton('text')
+            self.plaintext_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
             self.plaintext_button.clicked.connect(self._plaintext_btn_click)
 
             self._plaintext_widget = PlaintextEditWidget(parent=self)
 
         if self.make_title:
             self.title_label = QLabel(self.title)
+            self.title_label.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
             if self.help:
                 self.title_label.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
                 self.title_label.linkActivated.connect(self._help_clicked)
