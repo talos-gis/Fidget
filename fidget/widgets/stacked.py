@@ -255,10 +255,10 @@ class FidgetStacked(Generic[T], MultiFidgetWrapper[T, T]):
         return master_layout
 
     def parse(self):
-        return self.current_subwidget().parse()
+        return self.current_subwidget().maybe_parse()
 
     def validate(self, v):
-        return self.current_subwidget().validate(v)
+        return self.current_subwidget().maybe_validate(v)
 
     def plaintext_printers(self):
         return self.current_subwidget().plaintext_printers()

@@ -83,6 +83,27 @@ def first_valid(_self, _invalid=None, **kwargs: Optional[T]) -> T:
         raise TypeError(f'none of {", ".join(kwargs.keys())} provided{self_str}') from e
 
 
+def optional_valid(_self, _invalid=None, **kwargs: Optional[T]) -> Optional[T]:
+    """
+    check at most one of the arguments is not None, and return its value
+    :return: the value of the only not-None argument, or None
+    """
+    valid = _invalid
+    for k, v in kwargs.items():
+        if v is _invalid:
+            continue
+        if valid is not _invalid:
+            if _self:
+                self_str = f' in {_self}'
+            else:
+                self_str = ''
+            raise TypeError(f'both {valid[0]} and {k} provided{self_str}')
+        valid = k, v
+    if valid is _invalid:
+        return _invalid
+    return valid[1]
+
+
 def shorten(s: str, width: int, filler='...'):
     if len(s) <= width:
         return s

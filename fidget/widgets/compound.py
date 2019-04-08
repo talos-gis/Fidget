@@ -91,7 +91,7 @@ class FidgetCompound(Generic[T], MultiFidgetWrapper[Any, T]):
         d = self.init_result()
         for key, subwidget in self.inners_items(self.inners):
             try:
-                value = subwidget.parse()
+                value = subwidget.maybe_parse()
             except ParseError as e:
                 raise ParseError('error parsing ' + subwidget.title, offender=subwidget) from e
             self.insert_result(d, key, value)
@@ -101,7 +101,7 @@ class FidgetCompound(Generic[T], MultiFidgetWrapper[Any, T]):
         super().validate(d)
         for (k, v), subwidget in self.result_zip_subwidget(d, self.inners):
             try:
-                subwidget.validate(v)
+                subwidget.maybe_validate(v)
             except ValidationError as e:
                 raise ValidationError('error validating ' + subwidget.title, offender=subwidget) from e
 

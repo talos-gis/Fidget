@@ -5,7 +5,7 @@ from tests.gui.__util__ import test_as_main
 
 
 @test_as_main()
-class MinInt(FidgetMinimal):
+class MinPoint(FidgetMinimal):
     MAKE_TITLE = True
     INITIAL_VALUE = (15, 12)
 

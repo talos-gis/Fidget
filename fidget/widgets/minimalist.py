@@ -5,9 +5,9 @@ from typing import TypeVar, Generic
 from fidget.backend.QtWidgets import QHBoxLayout, QPushButton, QBoxLayout
 
 from fidget.core import FidgetTemplate, TemplateLike, Fidget
-from fidget.core.__util__ import first_valid
+from fidget.core.__util__ import first_valid, optional_valid
 
-from fidget.widgets.__util__ import only_valid, optional_valid
+from fidget.widgets.__util__ import only_valid
 from fidget.widgets.label import FidgetLabel
 from fidget.widgets.confirmer import FidgetQuestion
 from fidget.widgets.idiomatic_inner import SingleFidgetWrapper
@@ -78,7 +78,7 @@ class FidgetMinimal(Generic[T], SingleFidgetWrapper[T, T]):
         self.outer.fill_value(value)
 
     def parse(self):
-        return self.outer.parse()
+        return self.outer.maybe_parse()
 
     def indication_changed(self, value):
         Fidget.indication_changed(self, value)

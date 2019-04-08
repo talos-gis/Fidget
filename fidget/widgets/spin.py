@@ -3,8 +3,7 @@ from typing import Union, TypeVar, Generic, Iterable, Tuple
 from fidget.backend.QtGui import QValidator
 from fidget.backend.QtWidgets import QSpinBox, QDoubleSpinBox, QHBoxLayout
 from fidget.core import Fidget
-from fidget.core.__util__ import first_valid
-from fidget.widgets.__util__ import optional_valid
+from fidget.core.__util__ import first_valid, optional_valid
 from fidget.widgets.discrete import FidgetDiscreteChoice
 from fidget.widgets.user_util import FidgetFloat, FidgetInt
 

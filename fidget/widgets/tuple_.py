@@ -81,9 +81,9 @@ class FidgetTuple(FidgetCompound[tuple]):
         with self.setup_provided(master_layout, layout):
             for inner in self.make_inners():
                 layout.addWidget(inner)
+            self.value_type = namedtuple(to_identifier(self.title), (to_identifier(i.title) for i in self.inners),
+                                         rename=True)
 
-        self.value_type = namedtuple(to_identifier(self.title), (to_identifier(i.title) for i in self.inners),
-                                     rename=True)
 
         frame.setLayout(layout)
         master_layout.addWidget(frame)

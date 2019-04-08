@@ -126,13 +126,13 @@ class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
 
     def parse(self):
         if self.not_none_checkbox.isChecked():
-            return self.inner.parse()
+            return self.inner.maybe_parse()
         return self.none_value
 
     def validate(self, v):
         super().validate(v)
         if v is not self.none_value:
-            self.inner.validate(v)
+            self.inner.maybe_validate(v)
 
     def plaintext_printers(self):
         def printer_wrapper(ip):
