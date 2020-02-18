@@ -15,6 +15,9 @@ QtGui = __backend__.module('QtGui')
 
 QDesktopServices: Type[PyQt5.QtGui.QDesktopServices] = _QtGui['QDesktopServices']
 QColor: Type[PyQt5.QtGui.QColor] = _QtGui['QColor']
+QTextCharFormat: Type[PyQt5.QtGui.QTextCharFormat] = _QtGui['QTextCharFormat']
+QFont: Type[PyQt5.QtGui.QFont] = _QtGui['QFont']
+QSyntaxHighlighter: Type[PyQt5.QtGui.QSyntaxHighlighter] = _QtGui['QSyntaxHighlighter']
 QCursor: Type[PyQt5.QtGui.QCursor] = _QtGui['QCursor']
 QFontDatabase: Type[PyQt5.QtGui.QFontDatabase] = _QtGui['QFontDatabase']
 QIcon: Type[PyQt5.QtGui.QIcon] = _QtGui['QIcon']
