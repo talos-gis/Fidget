@@ -1,23 +1,46 @@
-import setuptools
+from setuptools import setup, find_packages
 
-import fidget
+from src.fidget import (
+    __pacakge_name__,
+    __author__,
+    __author_email__,
+    __license__,
+    __url__,
+    __version__,
+    __description__,
+)
 
-setuptools.setup(
-    name=fidget.__name__,
-    version=fidget.__version__,
-    author=fidget.__author__,
-    description='Fidget is an adapter of Qt into a functional-style interface. Fidget can be used seamlessly with PyQt5'
-                ' and PySide2. Fidget is designed to create an effortless and rich UI for data science and analysis.'
-                f' See [the github page]({fidget.__url__}) for more details',
-    url=fidget.__url__,
-    packages=['fidget', 'fidget.core', 'fidget.widgets', 'fidget.backend'],
+classifiers = [
+    'Development Status :: 5 - Production/Stable',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python :: 3',
+]
+
+__readme__ = open('README.md', encoding="utf-8").read()
+__readme_type__ = 'text/markdown'
+
+package_root = 'src'   # package sources are under this dir
+packages = find_packages(package_root)  # include all packages under package_root
+package_dir = {'': package_root}  # packages sources are under package_root
+
+setup(
+    name=__pacakge_name__,
+    version=__version__,
+    author=__author__,
+    author_email=__author_email__,
+    license=__license__,
+    url=__url__,
+    long_description=__readme__,
+    long_description_content_type=__readme_type__,
+    description=__description__,
+    classifiers=classifiers,
+    packages=packages,
+    package_dir=package_dir,
     extras_require={
         'PyQt': ['PyQt5'],
         'PySide': ['PySide2']
     },
     python_requires='>=3.7.0',
-    include_package_data=True,
-    data_files=[
-        ('', ['README.md', 'CHANGELOG.md']),
-    ],
 )
