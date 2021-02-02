@@ -1,6 +1,6 @@
 from fidget.widgets import FidgetMatrix, FidgetInt, inner_fidget, FidgetMinimal, FidgetTuple
 
-from tests.gui.__util__ import test_as_main
+from fidget.tests.gui.__util__ import test_as_main
 
 
 @test_as_main()

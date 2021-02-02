@@ -2,7 +2,7 @@ from fidget.backend.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 
 from fidget.widgets import FidgetInt, FidgetQuestion
 
-from tests.gui.__util__ import test_as_main
+from fidget.tests.gui.__util__ import test_as_main
 
 
 @test_as_main()

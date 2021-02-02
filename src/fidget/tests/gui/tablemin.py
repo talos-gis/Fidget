@@ -1,7 +1,7 @@
 from fidget.widgets.user_util import FidgetInt
 from fidget.backend import prefer
 
-prefer('PyQt5')
+# prefer('PySide6')
 
 from fidget.backend.QtWidgets import QVBoxLayout
 from fidget.widgets import FidgetQuestion, FidgetMatrix, FidgetMinimal, FidgetDict

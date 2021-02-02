@@ -4,7 +4,7 @@ from fidget.backend.QtWidgets import QLineEdit, QHBoxLayout
 
 from fidget.core import Fidget, regex_parser, json_parser, PlaintextParseError, ParseError, wrap_plaintext_parser
 
-from tests.gui.__util__ import test_as_main
+from fidget.tests.gui.__util__ import test_as_main
 
 
 def parse_point(x, y):

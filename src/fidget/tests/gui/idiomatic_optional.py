@@ -1,6 +1,6 @@
 from fidget.widgets import FidgetOptional, FidgetCombo, inner_fidget
 
-from tests.gui.__util__ import test_as_main
+from fidget.tests.gui.__util__ import test_as_main
 
 
 @test_as_main(make_indicator=True, make_title=True, make_plaintext=True)

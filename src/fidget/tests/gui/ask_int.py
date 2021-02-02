@@ -2,7 +2,7 @@ from fidget.core import validator
 
 from fidget.widgets import FidgetInt, FidgetConfirmer, inner_fidget
 
-from tests.gui.__util__ import test_as_main
+from fidget.tests.gui.__util__ import test_as_main
 
 
 @validator()

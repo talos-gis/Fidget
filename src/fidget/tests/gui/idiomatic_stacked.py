@@ -2,7 +2,7 @@ from fidget.backend import QHBoxLayout
 
 from fidget.widgets import FidgetCombo, inner_fidget, FidgetStacked, FidgetLabel, FidgetInt
 
-from tests.gui.__util__ import test_as_main
+from fidget.tests.gui.__util__ import test_as_main
 
 
 @test_as_main('number', make_indicator=True, make_title=True, make_plaintext=True, selector_cls='radio')

@@ -1,5 +1,5 @@
 from fidget.widgets import FidgetFilePaths
-from tests.gui.__util__ import test_as_main
+from fidget.tests.gui.__util__ import test_as_main
 
 qfd = {'filter': 'py (*.py);;all (*.*)'}
 
