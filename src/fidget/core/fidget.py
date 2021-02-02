@@ -8,6 +8,7 @@ from pathlib import Path
 from functools import partial, wraps, reduce
 from itertools import chain
 
+from fidget.backend.qtbackend import QtWrapper
 from fidget.backend.QtWidgets import QWidget, QPlainTextEdit, QPushButton, QComboBox, QLabel, QHBoxLayout, QVBoxLayout, \
     QMessageBox, QFileDialog, QGroupBox, QGridLayout, QDialog, QSizePolicy, QBoxLayout
 from fidget.backend.QtCore import Qt, pyqtSignal, __backend__
@@ -213,7 +214,7 @@ class Fidget(QWidget, Generic[T], TemplateLike[T]):
         if kwargs.get('flags', None) is None:
             kwargs['flags'] = self.FLAGS
 
-        if 'flags' in kwargs and __backend__.__name__ == 'PySide2':
+        if 'flags' in kwargs and __backend__.wrapper == QtWrapper.PYSIDE:
             kwargs['f'] = kwargs.pop('flags')
 
         try:

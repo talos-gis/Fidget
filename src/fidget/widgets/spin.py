@@ -45,7 +45,7 @@ class FidgetSpin(Fidget[float]):
         with self.setup_provided(layout):
             spin_cls = QDoubleSpinBox if use_float else QSpinBox
             self.spin = spin_cls()
-            self.spin.valueChanged[str].connect(self.change_value)
+            self.spin.valueChanged[int].connect(self.change_value)
 
             if minimum:
                 self.spin.setMinimum(minimum)
@@ -119,7 +119,7 @@ class FidgetDiscreteSpin(Generic[T], FidgetDiscreteChoice[T]):
 
         with self.setup_provided(layout):
             self.spin = QSpinBox()
-            self.spin.valueChanged[str].connect(self.change_value)
+            self.spin.valueChanged[int].connect(self.change_value)
 
             minimum = 0
             maximum = len(self.options) - 1

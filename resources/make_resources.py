@@ -1,17 +1,20 @@
+import os
 import subprocess
 from io import StringIO
+from pathlib import Path
 
-qrc_path = r'resources/resources.qrc'
-dst_path = r'fidget/backend/_resources.py'
-
-cmd = f'pyside2-rcc.exe -py3 "{qrc_path}"'
+resources_root = Path(os.path.realpath(__file__)).parent
+qrc_path = resources_root / r'resources.qrc'
+dst_path = resources_root.parent / r'src/fidget/backend/_resources.py'
+rcc_path = r'c:\Python39\Scripts\pyside6-rcc.exe'
+cmd = f'{rcc_path} {qrc_path}'
 
 line_replace = {
-    'from PySide2 import QtCore\n':
+    'from PySide6 import QtCore\n':
         'from fidget.backend.QtCore import QtCore\n',
     '# WARNING! All changes made in this file will be lost!\n':
         '# WARNING! All changes made in this file will be lost!\n'
-        '# NOTE: this file was edited by Fidget to accommodate both PySide2 and PyQt5\n'
+        '# NOTE: this file was edited by Fidget to accommodate PySide6, PySide5 and PyQt5\n'
 }
 
 if __name__ == '__main__':

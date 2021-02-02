@@ -1,9 +1,15 @@
+from enum import Enum, auto
 from typing import Dict, Tuple
 
 from abc import ABC, abstractmethod
 from types import ModuleType
 
 from importlib import import_module
+
+
+class QtWrapper(Enum):
+    PYQT = auto()
+    PYSIDE = auto()
 
 
 class PartialItemGetter:
@@ -20,6 +26,10 @@ class QtBackend(ABC):
     """
     Abstract class for Qt python backends
     """
+    def __init__(self, wrapper: QtWrapper, qt_version: int):
+        self.wrapper: QtWrapper = wrapper
+        self.qt_version: int = qt_version
+
     @abstractmethod
     def load(self):
         """
@@ -57,7 +67,8 @@ class NamePrefixQtBackend(QtBackend):
     """
     A Qt python backend that imports packages with standard names
     """
-    def __init__(self, name):
+    def __init__(self, wrapper: QtWrapper, qt_version: int, name: str):
+        super().__init__(wrapper=wrapper, qt_version=qt_version)
         self.modules: Dict[str, ModuleType] = {}
         self.__name__ = name
 
@@ -84,7 +95,7 @@ class NamePrefixQtBackend(QtBackend):
         return getattr(mod, symbol)
 
 
-class PyQt5QtBackend(NamePrefixQtBackend):
+class PyQtQtBackend(NamePrefixQtBackend):
     def __getitem__(self, item):
         if item == ('QtCore', 'Signal'):
             _signal = self['QtCore', 'pyqtSignal']
@@ -97,10 +108,11 @@ class PyQt5QtBackend(NamePrefixQtBackend):
             return super().__getitem__(item)
 
 
-PyQt5_backend = PyQt5QtBackend('PyQt5')
+PyQt6_backend = PyQtQtBackend(wrapper=QtWrapper.PYQT, qt_version=6, name='PyQt6')
+PyQt5_backend = PyQtQtBackend(wrapper=QtWrapper.PYQT, qt_version=5, name='PyQt5')
 
 
-class PySide2QtBackend(NamePrefixQtBackend):
+class PySideQtBackend(NamePrefixQtBackend):
     def __getitem__(self, item):
         if item == ('QtCore', 'pyqtSignal'):
             _signal = self['QtCore', 'Signal']
@@ -113,4 +125,5 @@ class PySide2QtBackend(NamePrefixQtBackend):
             return super().__getitem__(item)
 
 
-PySide2_backend = PySide2QtBackend('PySide2')
+PySide6_backend = PySideQtBackend(wrapper=QtWrapper.PYSIDE, qt_version=6, name='PySide6')
+PySide2_backend = PySideQtBackend(wrapper=QtWrapper.PYSIDE, qt_version=5, name='PySide2')

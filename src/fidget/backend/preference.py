@@ -1,18 +1,24 @@
+# from PySide6.QtWidgets import QAction
+from collections import OrderedDict
 from typing import Dict, Union, Optional
 
 from warnings import warn
 
-from fidget.backend.qtbackend import QtBackend, PyQt5_backend, PySide2_backend
+from fidget.backend.qtbackend import QtBackend, PySide6_backend, PySide2_backend, PyQt6_backend, PyQt5_backend
 
 priority: Optional[QtBackend] = None
 fail_ok = True
 
-backends: Dict[str, QtBackend] = {'PySide2': PySide2_backend, 'PyQt5': PyQt5_backend}
+backends = OrderedDict[str, QtBackend]()
+backends['PySide6'] = PySide6_backend
+backends['PySide2'] = PySide2_backend
+# backends['PyQt6'] = PyQt6_backend  # not supported yet...
+backends['PyQt5'] = PyQt5_backend
 
 loaded: Optional[QtBackend] = None
 
 
-def prefer(backend: Union[QtBackend, str], try_all=False):
+def prefer(backend: Union[QtBackend, str], try_all=True):
     """
     Set a preference for a backend to use.
     :param backend: the backend to attempt to import first.

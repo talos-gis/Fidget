@@ -17,7 +17,11 @@ from fidget.widgets.idiomatic_inner import SingleFidgetWrapper
 from fidget.widgets.__util__ import only_valid, is_trivial_printer
 
 if __backend__.__name__ == 'PySide2':
-    import shiboken2
+    import shiboken2 as shiboken
+elif __backend__.__name__ == 'PySide6':
+    import shiboken6 as shiboken
+else:
+    shiboken = None
 
 T = TypeVar('T')
 C = TypeVar('C')
@@ -52,7 +56,7 @@ class FidgetOptional(Generic[T, C], SingleFidgetWrapper[T, Union[T, C]]):
                 self.dispatch()
                 obj.setFocus()
 
-            if __backend__.__name__ == 'PySide2' and not shiboken2.isValid(obj):
+            if shiboken is not None and not shiboken.isValid(obj):
                 return False
             return super().eventFilter(obj, event)
 

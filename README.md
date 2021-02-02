@@ -1,7 +1,7 @@
 # Fidget
 
-Fidget is an adapter of Qt into a functional-style interface.
-Fidget can be used seamlessly with PyQt5 and PySide2. 
+Fidget is an adapter of Qt6/Qt5 into a functional-style interface.
+Fidget can be used seamlessly with PySide6, PySide2 and PyQt5. 
 Fidget is designed to create an effortless and rich UI for data science and analysis.
 
 ## Concept
@@ -157,6 +157,11 @@ Fidget comes with many builtin widgets to ease usage. Most usages will not have 
 |`FidgetTuple`|a fidget that aggregates multiple fidgets into a `tuple`|
 
 ## Compatibility
-Fidget can use either PyQt5 and PySide2. By default, it will try to import both wrappers, starting with PySide2, and will use the first it successfully imported. This can be changed with `fidget.backend`'s function: `prefer`.
+Fidget can use either PySide6, PySide2 or PyQt5. 
+By default, it will try to import them in the follwing order: PySide6, PySide2 or PyQt5.
+It will use the first it successfully imported. 
+This can be changed with `fidget.backend`'s function: `prefer`.
 
-Users of fidget can also directly use whatever backend fidget is using (thus ensuring compatibility) by importing Qt's members from `fidget.backend` (currently, only imports from `QtWidgets` and `QtCore` are supported in this way)
+Users of fidget can also directly use whatever backend fidget is using (thus ensuring compatibility) 
+by importing Qt's members from `fidget.backend` 
+(currently, only imports from `QtGui`, `QtWidgets` and `QtCore` are supported in this way)

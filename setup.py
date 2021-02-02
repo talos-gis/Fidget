@@ -4,6 +4,8 @@ from src.fidget import (
     __pacakge_name__,
     __author__,
     __author_email__,
+    __maintainer__,
+    __maintainer_email__,
     __license__,
     __url__,
     __version__,
@@ -30,6 +32,8 @@ setup(
     version=__version__,
     author=__author__,
     author_email=__author_email__,
+    maintainer=__maintainer__,
+    maintainer_email=__maintainer_email__,
     license=__license__,
     url=__url__,
     long_description=__readme__,
@@ -39,8 +43,13 @@ setup(
     packages=packages,
     package_dir=package_dir,
     extras_require={
+        'qt': ['PySide6'],
+        'PySide': ['PySide6'],
+        'PySide6': ['PySide6'],
+        'PySide2': ['PySide2'],
         'PyQt': ['PyQt5'],
-        'PySide': ['PySide2']
+        # 'PyQt6': ['PyQt6'],
+        'PyQt5': ['PyQt5'],
     },
     python_requires='>=3.7.0',
 )
