@@ -1,6 +1,5 @@
 # from PySide6.QtWidgets import QAction
-from collections import OrderedDict
-from typing import Dict, Union, Optional
+from typing import Union, Optional, OrderedDict
 
 from warnings import warn
 
