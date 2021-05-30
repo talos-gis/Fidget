@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 from src.fidget import (
-    __pacakge_name__,
+    __package_name__,
     __author__,
     __author_email__,
     __maintainer__,
@@ -28,7 +28,7 @@ packages = find_packages(package_root)  # include all packages under package_roo
 package_dir = {'': package_root}  # packages sources are under package_root
 
 setup(
-    name=__pacakge_name__,
+    name=__package_name__,
     version=__version__,
     author=__author__,
     author_email=__author_email__,
