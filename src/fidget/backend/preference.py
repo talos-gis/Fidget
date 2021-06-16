@@ -8,11 +8,9 @@ from fidget.backend.qtbackend import QtBackend, PySide6_backend, PySide2_backend
 priority: Optional[QtBackend] = None
 fail_ok = True
 
-backends = OrderedDict[str, QtBackend]()
-backends['PySide6'] = PySide6_backend
-backends['PySide2'] = PySide2_backend
-# backends['PyQt6'] = PyQt6_backend  # not supported yet...
-backends['PyQt5'] = PyQt5_backend
+backends_list = [PySide6_backend, PySide2_backend, PyQt5_backend]
+# PyQt6_backend  # not supported yet...
+backends = OrderedDict[str, QtBackend]((b.__name__, b) for b in backends_list)
 
 loaded: Optional[QtBackend] = None
 
@@ -60,6 +58,7 @@ def load() -> QtBackend:
             first_err = e
         else:
             loaded = priority
+            print(f'Using selected backend: {loaded.__name__}')
             return loaded
 
     for backend in backends.values():
@@ -73,6 +72,7 @@ def load() -> QtBackend:
                 first_err = e
         else:
             loaded = backend
+            print(f'Using backend: {loaded.__name__}')
             return loaded
 
     if not first_err:
