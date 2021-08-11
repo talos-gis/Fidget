@@ -331,6 +331,6 @@ class RememberingFileDialog(QFileDialog):
     def exec(self):
         if self.last_dir:
             self.setDirectory(self.last_dir)
-        ret = super().exec_()
+        ret = super().exec()
         self.last_dir = super().directory()
         return ret
