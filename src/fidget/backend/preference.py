@@ -1,5 +1,6 @@
 # from PySide6.QtWidgets import QAction
-from typing import Union, Optional, OrderedDict
+from typing import Union, Optional
+from collections import OrderedDict
 
 from warnings import warn
 
@@ -10,7 +11,8 @@ fail_ok = True
 
 backends_list = [PySide6_backend, PySide2_backend, PyQt5_backend]
 # PyQt6_backend  # not supported yet...
-backends = OrderedDict[str, QtBackend]((b.__name__, b) for b in backends_list)
+# backend OrderedDict[str, QtBackend] maps a backend name to the backend type
+backends = OrderedDict((b.__name__, b) for b in backends_list)
 
 loaded: Optional[QtBackend] = None
 
