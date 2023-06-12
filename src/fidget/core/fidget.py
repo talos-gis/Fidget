@@ -24,7 +24,7 @@ from fidget.core.__util__ import error_details, first_valid, error_attrs, option
 T = TypeVar('T')
 
 
-# todo automatically create template if QApplication isn't instantiated?⌡
+# todo automatically create template if QApplication isn't instantiated?
 
 class TemplateLike(Generic[T]):
     @abstractmethod
@@ -776,7 +776,7 @@ class PlaintextEditWidget(Generic[T], Fidget[T]):
 
         master_layout.addWidget(self.print_widget)
 
-        self.clone_button = QPushButton('🡇')
+        self.clone_button = QPushButton('\N{Downwards Heavy Arrow}')
         self.clone_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
         self.clone_button.clicked.connect(self._clone_btn_clicked)
         master_layout.addWidget(self.clone_button)
